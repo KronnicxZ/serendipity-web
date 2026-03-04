@@ -12,6 +12,8 @@ import { Button } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/context/language-context'
 import { AuthControls } from '@/components/auth-controls'
+// #9 — Banderas desde componente compartido
+import { LANGUAGES as LANG_OPTIONS } from '@/components/flags'
 
 /* ─── TRANSLATIONS ──────────────────────────────────────────────── */
 const COPY = {
@@ -195,32 +197,6 @@ const SYSTEM_LOGS = [
     'NEURAL_LINK: ESTABLISHED · SECURE',
 ]
 
-/* ─── FLAGS ─────────────────────────────────────────────────────── */
-const SpainFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#AA151B" d="M0 0h512v128H0zM0 384h512v128H0z" />
-        <path fill="#F1BF00" d="M0 128h512v256H0z" />
-    </svg>
-)
-const USAFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#FFF" d="M0 0h512v512H0z" />
-        <path fill="#B22234" d="M0 0h512v39H0zm0 78h512v39H0zm0 79h512v39H0zm0 79h512v39H0zm0 78h512v39H0zm0 79h512v39H0zm0 79h512v39H0z" />
-        <path fill="#3C3B6E" d="M0 0h204v274H0z" />
-    </svg>
-)
-const VietnamFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#da251d" d="M0 0h512v512H0z" />
-        <path fill="#ffff00" d="M256 100l27.1 83.5H371l-71.1 51.6 27.1 83.5-71-51.6-71 51.6 27.2-83.5-71.1-51.6h87.9z" />
-    </svg>
-)
-
-const LANG_OPTIONS = [
-    { code: 'es' as Lang, label: 'ES', Flag: SpainFlag, name: 'Español' },
-    { code: 'en' as Lang, label: 'EN', Flag: USAFlag, name: 'English' },
-    { code: 'vn' as Lang, label: 'VN', Flag: VietnamFlag, name: 'Tiếng Việt' },
-]
 
 /* ─── HELPERS ───────────────────────────────────────────────────── */
 function TerminalTicker() {
@@ -778,29 +754,38 @@ function ClimateDemo({ lang }: { lang: Lang }) {
 function SophiaVisual() {
     return (
         <div className="relative w-full aspect-square max-w-sm mx-auto flex items-center justify-center">
+            {/* Orbiting rings — z-0 so they sit behind everything */}
             {[0, 1, 2].map(i => (
                 <motion.div
                     key={i}
                     className="absolute rounded-full border border-blue-500/10"
-                    style={{ inset: `${i * 15}%` }}
+                    style={{ inset: `${i * 15}%`, zIndex: 0 }}
                     animate={{ rotate: i % 2 === 0 ? 360 : -360 }}
                     transition={{ duration: 20 + i * 8, repeat: Infinity, ease: 'linear' }}
                 />
             ))}
+
+            {/* Orbiting dot — z-1 */}
             <motion.div
                 className="absolute w-full h-full"
+                style={{ zIndex: 1 }}
                 animate={{ rotate: 360 }}
                 transition={{ duration: 12, repeat: Infinity, ease: 'linear' }}
             >
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
             </motion.div>
+
+            {/* Central brain icon — z-20, above rings & dot */}
             <motion.div
                 animate={{ scale: [1, 1.04, 1] }}
                 transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                className="w-24 h-24 rounded-[28px] bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/30 z-10"
+                className="relative w-24 h-24 rounded-[28px] bg-blue-600 flex items-center justify-center shadow-2xl shadow-blue-600/30"
+                style={{ zIndex: 20 }}
             >
                 <Brain size={40} className="text-white" />
             </motion.div>
+
+            {/* Floating label chips — z-30, always on top */}
             {[
                 { label: 'ANALYZING', x: '-65%', y: '-15%' },
                 { label: 'INSIGHT', x: '55%', y: '-20%' },
@@ -813,7 +798,7 @@ function SophiaVisual() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 + i * 0.2 }}
                     className="absolute text-[8px] font-black uppercase tracking-[0.25em] bg-[var(--card)] border border-[var(--border)] px-2.5 py-1.5 rounded-full text-blue-500 whitespace-nowrap shadow-sm"
-                    style={{ left: chip.x, top: chip.y }}
+                    style={{ left: chip.x, top: chip.y, zIndex: 30 }}
                 >
                     {chip.label}
                 </motion.div>

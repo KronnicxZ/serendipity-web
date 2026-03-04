@@ -32,7 +32,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                 ref={ref}
                 whileTap={{ scale: 0.98 }}
                 className={cn(
-                    'inline-flex items-center justify-center rounded-[12px] font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
+                    'inline-flex items-center justify-center rounded-[12px] font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer',
                     variants[variant],
                     sizes[size],
                     className
@@ -64,7 +64,7 @@ export const Card = ({
 } & React.HTMLAttributes<HTMLDivElement>) => (
     <div
         className={cn(
-            'rounded-[20px] p-6 transition-all duration-300',
+            'rounded-[20px] p-6 transition-all',
             glass ? 'apple-blur border border-[var(--climate-border)]' : 'bg-[var(--card)] border border-[var(--climate-border)] shadow-sm',
             bio && 'animate-breathing',
             className
@@ -75,15 +75,19 @@ export const Card = ({
     </div>
 )
 
+// #1 — Badge con colores semánticos correctos
 export const Badge = ({ children, variant = 'default', className }: { children: React.ReactNode, variant?: 'default' | 'success' | 'warning' | 'critical', className?: string }) => {
     const variants = {
         default: 'bg-[var(--secondary)] text-[var(--muted-foreground)]',
-        success: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
-        warning: 'bg-blue-500/10 text-blue-500 border border-blue-500/20',
+        // ✅ success = emerald (positivo / online / activo)
+        success: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:text-emerald-400',
+        // ✅ warning = amber (advertencia, atención)
+        warning: 'bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:text-amber-400',
+        // critical = rojo (error, crítico)
         critical: 'bg-red-500/10 text-red-500 border border-red-500/20',
     }
     return (
-        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[10px] font-bold uppercase tracking-wider transition-colors duration-300 whitespace-nowrap', variants[variant], className)}>
+        <span className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[10px] font-bold uppercase tracking-wider whitespace-nowrap', variants[variant], className)}>
             {children}
         </span>
     )
@@ -103,8 +107,25 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
 )
 Input.displayName = 'Input'
 
+// #11 — Skeletons con formas más descriptivas
 export const Skeleton = ({ className }: { className?: string }) => (
-    <div className={cn('animate-pulse bg-[var(--muted)] rounded-[12px]', className)} />
+    <div className={cn('animate-pulse bg-gradient-to-r from-[var(--muted)] via-[var(--secondary)] to-[var(--muted)] bg-[length:200%_100%] rounded-[12px]', className)}
+        style={{ animation: 'skeleton-shimmer 1.6s ease-in-out infinite' }}
+    />
+)
+
+export const StatCardSkeleton = () => (
+    <div className="rounded-[20px] p-8 space-y-6 bg-[var(--card)] border border-[var(--border)] shadow-sm">
+        <div className="flex items-center justify-between">
+            <Skeleton className="w-12 h-12 !rounded-2xl" />
+            <Skeleton className="w-8 h-8 !rounded-full" />
+        </div>
+        <div className="space-y-2">
+            <Skeleton className="w-24 h-3" />
+            <Skeleton className="w-32 h-8" />
+            <Skeleton className="w-16 h-3" />
+        </div>
+    </div>
 )
 
 export const EmptyState = ({

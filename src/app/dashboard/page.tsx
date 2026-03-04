@@ -16,7 +16,7 @@ import {
     Zap,
     RefreshCcw
 } from 'lucide-react'
-import { Card, Badge, Button, Skeleton, EmptyState } from '@/components/ui-library'
+import { Card, Badge, Button, Skeleton, EmptyState, StatCardSkeleton } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 
 import { useDashboardData } from '@/hooks/use-dashboard-data'
@@ -26,7 +26,7 @@ import { PerformanceChart } from '@/components/dashboard/performance-chart'
 
 export default function DashboardPage() {
     const { user } = useAuth()
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
     const { data: dashData, isLoading } = useDashboardData()
 
     if (!user) return null
@@ -79,7 +79,12 @@ export default function DashboardPage() {
                         <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                         <div className="flex flex-col">
                             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-foreground)] mb-1">Status: {dashData?.trend.season.toUpperCase() || 'NORMAL'}</span>
-                            <span className="text-base font-bold text-[var(--foreground)]">{new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+                            <span className="text-base font-bold text-[var(--foreground)]">
+                                {new Date().toLocaleDateString(
+                                    language === 'en' ? 'en-US' : language === 'vn' ? 'vi-VN' : 'es-ES',
+                                    { weekday: 'long', day: 'numeric', month: 'long' }
+                                )}
+                            </span>
                         </div>
                     </Card>
                 </div>
@@ -87,23 +92,39 @@ export default function DashboardPage() {
 
             {/* Quick Metrics (Stats) */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {stats.map((m, idx) => (
-                    <Card key={idx} className="p-8 space-y-6 group hover:translate-y-[-4px] transition-all duration-500 border-none ring-1 ring-[var(--border)] shadow-sm">
-                        <div className="flex items-center justify-between">
-                            <div className={cn("p-3 rounded-2xl transition-colors", m.bg)}>
-                                <m.icon className={cn("w-5 h-5", m.color.replace('bg-', 'text-'))} />
-                            </div>
-                            <div className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ArrowRight size={14} className="text-[var(--muted-foreground)]" />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em]">{m.name}</p>
-                            <h3 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">{m.value}</h3>
-                        </div>
-                    </Card>
-                ))}
+                {isLoading
+                    ? Array.from({ length: 4 }).map((_, idx) => <StatCardSkeleton key={idx} />)
+                    : stats.map((m, idx) => {
+                        const isPositive = m.trend.startsWith('+')
+                        const isNegative = m.trend.startsWith('-')
+                        return (
+                            <Card key={idx} className="p-8 space-y-6 group hover:translate-y-[-4px] transition-all duration-500 border-none ring-1 ring-[var(--border)] shadow-sm">
+                                <div className="flex items-center justify-between">
+                                    <div className={cn("p-3 rounded-2xl transition-colors", m.bg)}>
+                                        <m.icon className={cn("w-5 h-5", m.color.replace('bg-', 'text-'))} />
+                                    </div>
+                                    <div className={cn(
+                                        "flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold",
+                                        isPositive ? "bg-emerald-500/10 text-emerald-600" :
+                                            isNegative ? "bg-red-500/10 text-red-500" :
+                                                "bg-[var(--secondary)] text-[var(--muted-foreground)]"
+                                    )}>
+                                        {isPositive && <span>↑</span>}
+                                        {isNegative && <span>↓</span>}
+                                        {m.trend}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em]">{m.name}</p>
+                                    <h3 className="text-3xl font-bold tracking-tight text-[var(--foreground)]">{m.value}</h3>
+                                    <p className="text-[10px] font-medium text-[var(--muted-foreground)] uppercase tracking-wider">{m.note}</p>
+                                </div>
+                            </Card>
+                        )
+                    })
+                }
             </div>
+
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Chart Area */}

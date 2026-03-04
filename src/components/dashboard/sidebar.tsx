@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronRight, LucideIcon } from 'lucide-react'
 import { usePathname } from 'next/navigation'
@@ -23,6 +22,7 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps) {
     const pathname = usePathname()
+    const isCompact = isDesktop && !isOpen
 
     return (
         <motion.aside
@@ -32,10 +32,11 @@ export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps)
                 x: !isDesktop && !isOpen ? -280 : 0
             }}
             className={cn(
-                "fixed inset-y-0 left-0 bg-[var(--card)]/80 apple-blur border-r border-[var(--climate-border)] z-50 overflow-hidden transition-all duration-300",
+                "fixed inset-y-0 left-0 bg-[var(--card)]/80 apple-blur border-r border-[var(--climate-border)] z-50 overflow-hidden",
                 !isDesktop && "shadow-2xl shadow-black/20"
             )}
         >
+            {/* Logo area */}
             <div className="h-24 flex items-center px-8 mb-4">
                 <AnimatePresence mode="wait">
                     {(isOpen || !isDesktop) ? (
@@ -66,29 +67,54 @@ export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps)
                 {menuItems.map((item) => {
                     const isActive = pathname === item.href
                     return (
-                        <Link
-                            key={item.name}
-                            href={item.href}
-                            prefetch={true}
-                            onClick={() => {
-                                if (!isDesktop) setOpen(false)
-                            }}
-                            className={cn(
-                                "flex items-center gap-4 p-3 rounded-[14px] transition-all duration-200 group relative",
-                                isActive ? "bg-[var(--climate-primary)] text-white shadow-lg shadow-[var(--climate-glow)]" : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
-                                isDesktop && !isOpen && "justify-center"
+                        // #3 — Tooltip en modo compacto
+                        <div key={item.name} className="relative group/tooltip">
+                            <Link
+                                href={item.href}
+                                prefetch={true}
+                                onClick={() => {
+                                    if (!isDesktop) setOpen(false)
+                                }}
+                                className={cn(
+                                    "flex items-center gap-4 p-3 rounded-[14px] transition-all group relative",
+                                    isActive
+                                        ? "bg-[var(--climate-primary)] text-white shadow-lg shadow-[var(--climate-glow)]"
+                                        : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]",
+                                    isCompact && "justify-center"
+                                )}
+                            >
+                                <item.icon
+                                    size={22}
+                                    className={cn(
+                                        "shrink-0 transition-transform",
+                                        isActive ? "scale-110" : "group-hover:scale-110"
+                                    )}
+                                />
+                                {(isOpen || !isDesktop) && (
+                                    <span className="font-semibold text-[15px] whitespace-nowrap">{item.name}</span>
+                                )}
+                                {(isOpen || !isDesktop) && isActive && (
+                                    <motion.div layoutId="active-nav" className="absolute right-3">
+                                        <ChevronRight size={16} className="opacity-50" />
+                                    </motion.div>
+                                )}
+                            </Link>
+
+                            {/* Tooltip visible solo en modo compacto (isDesktop && !isOpen) */}
+                            {isCompact && (
+                                <div className={cn(
+                                    "absolute left-full ml-3 top-1/2 -translate-y-1/2 z-[60]",
+                                    "pointer-events-none opacity-0 group-hover/tooltip:opacity-100",
+                                    "transition-opacity duration-150"
+                                )}>
+                                    <div className="bg-[var(--foreground)] text-[var(--background)] text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg whitespace-nowrap shadow-xl">
+                                        {item.name}
+                                        {/* Arrow pointing left */}
+                                        <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[var(--foreground)]" />
+                                    </div>
+                                </div>
                             )}
-                        >
-                            <item.icon size={22} className={cn("shrink-0 transition-transform duration-300", isActive ? "scale-110" : "group-hover:scale-110")} />
-                            {(isOpen || !isDesktop) && (
-                                <span className="font-semibold text-[15px] whitespace-nowrap">{item.name}</span>
-                            )}
-                            {(isOpen || !isDesktop) && isActive && (
-                                <motion.div layoutId="active-nav" className="absolute right-3">
-                                    <ChevronRight size={16} className="opacity-50" />
-                                </motion.div>
-                            )}
-                        </Link>
+                        </div>
                     )
                 })}
             </nav>

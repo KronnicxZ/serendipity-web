@@ -30,7 +30,10 @@ export const vn = {
         climate: "Khí hậu",
         synchronized: "Đã đồng bộ",
         pinned: "Đã ghim",
-        ago: "trước"
+        ago: "trước",
+        notifications: "Thông báo",
+        noAlerts: "Không có cảnh báo",
+        new: "mới"
     },
     auth: {
         title: "Lõi Anthropos",

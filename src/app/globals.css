@@ -5,20 +5,20 @@
 }
 
 :root {
-  --background: #ffffff;
+  --background: #f5f5f7;
   --foreground: #09090b;
   --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
+  --secondary: #ebebed;
   --secondary-foreground: #09090b;
-  --muted: #f4f4f5;
+  --muted: #ebebed;
   --muted-foreground: #71717a;
   --accent: #dc2626;
   --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
+  --border: #e0e0e3;
+  --input: #e0e0e3;
   --ring: rgba(37, 99, 235, 0.5);
   --radius: 14px;
   --card: #ffffff;
@@ -165,7 +165,17 @@
   will-change: transform, box-shadow, border-color;
 }
 
-/* Smooth Transitions - Speed up for snapier feel */
+/* Smooth Transitions - snappy feel without overriding Framer Motion */
 .transition-all {
-  transition-duration: 200ms !important;
+  transition-duration: 200ms;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }

@@ -30,7 +30,10 @@ export const en = {
         climate: "Climate",
         synchronized: "Synchronized",
         pinned: "Pinned",
-        ago: "ago"
+        ago: "ago",
+        notifications: "Notifications",
+        noAlerts: "No active alerts",
+        new: "new"
     },
     auth: {
         title: "Anthropos Core",

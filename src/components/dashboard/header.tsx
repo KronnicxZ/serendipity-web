@@ -7,18 +7,18 @@ import {
     Sun,
     Moon,
     Bell,
-    User as UserIcon,
     Settings,
     LogOut,
     Command as CommandIcon,
     LucideIcon,
-    Languages
 } from 'lucide-react'
 import { Button, Badge } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { useTranslation } from '@/context/language-context'
+// #9 — Banderas importadas del componente compartido
+import { LANGUAGES } from '@/components/flags'
 
 interface HeaderProps {
     isSidebarOpen: boolean
@@ -35,29 +35,35 @@ interface HeaderProps {
     logout: () => void
 }
 
-const SpainFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#AA151B" d="M0 0h512v128H0zM0 384h512v128H0z" />
-        <path fill="#F1BF00" d="M0 128h512v256H0z" />
-        <circle cx="150" cy="256" r="40" fill="#AA151B" opacity="0.2" />
-    </svg>
-)
+// #6 — Avatar con iniciales del usuario
+function UserAvatar({ name, role }: { name: string; role: string }) {
+    const initials = name
+        .split(' ')
+        .map(n => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
 
-const USAFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#FFF" d="M0 0h512v512H0z" />
-        <path fill="#B22234" d="M0 0h512v39H0zm0 78h512v39H0zm0 79h512v39H0zm0 79h512v39H0zm0 78h512v39H0zm0 79h512v39H0zm0 79h512v39H0z" />
-        <path fill="#3C3B6E" d="M0 0h204v274H0z" />
-        <circle cx="102" cy="137" r="40" fill="#FFF" opacity="0.4" />
-    </svg>
-)
+    // Color determinista basado en el nombre
+    const colors = [
+        'from-blue-500 to-blue-700',
+        'from-violet-500 to-purple-700',
+        'from-rose-500 to-red-700',
+        'from-emerald-500 to-teal-700',
+        'from-amber-500 to-orange-700',
+    ]
+    const colorIdx = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % colors.length
+    const gradient = colors[colorIdx]
 
-const VietnamFlag = () => (
-    <svg viewBox="0 0 512 512" className="w-full h-full">
-        <path fill="#da251d" d="M0 0h512v512H0z" />
-        <path fill="#ffff00" d="M256 100l27.1 83.5H371l-71.1 51.6 27.1 83.5-71-51.6-71 51.6 27.2-83.5-71.1-51.6h87.9z" />
-    </svg>
-)
+    return (
+        <div className={cn(
+            'w-10 h-10 rounded-[14px] bg-gradient-to-br flex items-center justify-center shadow-lg border-2 border-transparent group-hover:border-[var(--climate-primary)] transition-all overflow-hidden',
+            gradient
+        )}>
+            <span className="text-white text-xs font-black tracking-tight">{initials}</span>
+        </div>
+    )
+}
 
 export function Header({
     isSidebarOpen,
@@ -76,23 +82,18 @@ export function Header({
     const router = useRouter()
     const [isProfileOpen, setIsProfileOpen] = useState(false)
     const [isLangOpen, setIsLangOpen] = useState(false)
+    const [isAlertsOpen, setIsAlertsOpen] = useState(false)
     const { language, setLanguage, t } = useTranslation()
 
-    const languages = [
-        { code: 'es', label: 'ES', flag: SpainFlag },
-        { code: 'en', label: 'EN', flag: USAFlag },
-        { code: 'vn', label: 'VN', flag: VietnamFlag },
-    ]
-
-    const currentLang = languages.find(l => l.code === language) || languages[0]
+    const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0]
 
     return (
         <header className={cn(
-            "fixed top-0 right-0 h-20 apple-blur border-b border-[var(--climate-border)] z-40 px-6 lg:px-12 flex items-center justify-between transition-all duration-300",
+            "fixed top-0 right-0 h-20 apple-blur border-b border-[var(--climate-border)] z-40 px-6 lg:px-12 flex items-center justify-between",
             isDesktop ? (isSidebarOpen ? "left-[280px]" : "left-[88px]") : "left-0"
         )}>
             <div className="flex items-center gap-4 sm:gap-6">
-                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!isSidebarOpen)} className="!rounded-full hover:bg-[var(--secondary)] transition-colors overflow-hidden">
+                <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!isSidebarOpen)} className="!rounded-full hover:bg-[var(--secondary)] overflow-hidden">
                     <AnimatePresence mode="wait" initial={false}>
                         <motion.div
                             key={isSidebarOpen ? 'close' : 'menu'}
@@ -112,8 +113,8 @@ export function Header({
                     </div>
 
                     {climate && (
-                        <div className="flex items-center gap-3 pl-4 border-l border-[var(--climate-border)] transition-colors duration-300">
-                            <div className="p-2 bg-[var(--climate-glow)] text-[var(--climate-primary)] rounded-lg transition-colors duration-300">
+                        <div className="flex items-center gap-3 pl-4 border-l border-[var(--climate-border)]">
+                            <div className="p-2 bg-[var(--climate-glow)] text-[var(--climate-primary)] rounded-lg">
                                 <ClimateIcon size={18} />
                             </div>
                             <div className="hidden md:block">
@@ -125,88 +126,93 @@ export function Header({
                 </div>
             </div>
 
-            <div className="flex items-center gap-6">
-                <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[var(--secondary)] border border-[var(--border)] rounded-xl text-[10px] font-bold text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--muted-foreground)] transition-all" onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}>
+            <div className="flex items-center gap-3 sm:gap-4">
+                {/* Search shortcut */}
+                <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[var(--secondary)] border border-[var(--border)] rounded-xl text-[10px] font-bold text-[var(--muted-foreground)] cursor-pointer hover:border-[var(--muted-foreground)]"
+                    onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}>
                     <CommandIcon size={12} /> {t('common.search')}
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="relative">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsLangOpen(!isLangOpen)}
-                            className="!rounded-2xl border border-[var(--border)] shadow-sm bg-[var(--card)] px-4 text-[11px] font-bold uppercase tracking-[0.2em] h-10 flex gap-3 items-center hover:bg-[var(--secondary)] transition-all group overflow-hidden text-[var(--foreground)]"
-                        >
-                            <div className="relative w-5 h-5 flex items-center justify-center overflow-hidden rounded-full border border-white/20 shadow-sm shrink-0 bg-[var(--secondary)]">
-                                <AnimatePresence mode="wait" initial={false}>
-                                    <motion.div
-                                        key={currentLang.code}
-                                        initial={{ y: 15, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        exit={{ y: -15, opacity: 0 }}
-                                        className="absolute inset-0"
-                                    >
-                                        <currentLang.flag />
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
-                            <span className="min-w-[20px] text-center">{currentLang.label}</span>
-                        </Button>
-
-                        <AnimatePresence>
-                            {isLangOpen && (
-                                <>
-                                    <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                                        className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 mt-4 w-56 bg-[var(--card)] border border-[var(--border)] rounded-[20px] shadow-2xl z-50 overflow-hidden p-1.5"
-                                    >
-                                        <div className="space-y-1">
-                                            {languages.map((lang) => (
-                                                <button
-                                                    key={lang.code}
-                                                    onClick={() => {
-                                                        setLanguage(lang.code as any)
-                                                        setIsLangOpen(false)
-                                                    }}
-                                                    className={cn(
-                                                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[11px] font-bold uppercase tracking-wider transition-all",
-                                                        language === lang.code
-                                                            ? "bg-[var(--secondary)] text-[var(--foreground)]"
-                                                            : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
-                                                    )}
-                                                >
-                                                    <div className="w-5 h-5 rounded-full overflow-hidden border border-[var(--border)] shadow-sm">
-                                                        <lang.flag />
-                                                    </div>
-                                                    {lang.label} - {lang.code === 'es' ? 'Español' : lang.code === 'en' ? 'English' : 'Tiếng Việt'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </motion.div>
-                                </>
-                            )}
-                        </AnimatePresence>
-                    </div>
-
-                    <Button variant="ghost" size="icon" onClick={toggleTheme} className="!rounded-full border border-[var(--border)] shadow-sm bg-[var(--card)] w-10 h-10">
-                        {isDarkMode ? <Sun size={18} className="text-blue-500" /> : <Moon size={18} />}
+                {/* Language selector */}
+                <div className="relative">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsLangOpen(!isLangOpen)}
+                        className="!rounded-2xl border border-[var(--border)] shadow-sm bg-[var(--card)] px-4 text-[11px] font-bold uppercase tracking-[0.2em] h-10 flex gap-3 items-center hover:bg-[var(--secondary)] group overflow-hidden text-[var(--foreground)]"
+                    >
+                        <div className="relative w-5 h-5 flex items-center justify-center overflow-hidden rounded-full border border-white/20 shadow-sm shrink-0 bg-[var(--secondary)]">
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={currentLang.code}
+                                    initial={{ y: 15, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    exit={{ y: -15, opacity: 0 }}
+                                    className="absolute inset-0"
+                                >
+                                    <currentLang.Flag />
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+                        <span className="min-w-[20px] text-center">{currentLang.label}</span>
                     </Button>
+
+                    <AnimatePresence>
+                        {isLangOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    className="absolute left-1/2 -translate-x-1/2 sm:left-auto sm:right-0 sm:translate-x-0 mt-4 w-56 bg-[var(--card)] border border-[var(--border)] rounded-[20px] shadow-2xl z-50 overflow-hidden p-1.5"
+                                >
+                                    <div className="space-y-1">
+                                        {LANGUAGES.map((lang) => (
+                                            <button
+                                                key={lang.code}
+                                                onClick={() => {
+                                                    setLanguage(lang.code as any)
+                                                    setIsLangOpen(false)
+                                                }}
+                                                className={cn(
+                                                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-[12px] text-[11px] font-bold uppercase tracking-wider transition-all",
+                                                    language === lang.code
+                                                        ? "bg-[var(--secondary)] text-[var(--foreground)]"
+                                                        : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)] hover:text-[var(--foreground)]"
+                                                )}
+                                            >
+                                                <div className="w-5 h-5 rounded-full overflow-hidden border border-[var(--border)] shadow-sm">
+                                                    <lang.Flag />
+                                                </div>
+                                                {lang.label} - {lang.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
                 </div>
 
+                {/* Theme toggle */}
+                <Button variant="ghost" size="icon" onClick={toggleTheme}
+                    className="!rounded-full border border-[var(--border)] shadow-sm bg-[var(--card)] w-10 h-10">
+                    {isDarkMode ? <Sun size={18} className="text-blue-500" /> : <Moon size={18} />}
+                </Button>
+
+                {/* #4 — Bell con panel de notificaciones */}
                 <div className="relative">
                     <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => setIsAlertsOpen(!isAlertsOpen)}
                         className={cn(
-                            "!rounded-full border border-[var(--border)] shadow-sm relative bg-[var(--card)]",
+                            "!rounded-full border border-[var(--border)] shadow-sm relative bg-[var(--card)] w-10 h-10",
                             criticalAlerts.length > 0 ? "text-red-500" : "text-[var(--muted-foreground)]"
                         )}
                     >
-                        <Bell size={20} className={cn(criticalAlerts.length > 0 && "animate-bounce")} />
+                        <Bell size={18} className={cn(criticalAlerts.length > 0 && "animate-bounce")} />
                         {hasAlerts && (
                             <span className={cn(
                                 "absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white border-2 border-[var(--card)]",
@@ -216,22 +222,68 @@ export function Header({
                             </span>
                         )}
                     </Button>
+
+                    <AnimatePresence>
+                        {isAlertsOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsAlertsOpen(false)} />
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                    className="absolute right-0 mt-4 w-80 bg-[var(--card)] border border-[var(--border)] rounded-[24px] shadow-2xl z-50 overflow-hidden"
+                                >
+                                    <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
+                                        <p className="text-sm font-bold text-[var(--foreground)]">{t('common.notifications') ?? 'Notificaciones'}</p>
+                                        {hasAlerts && (
+                                            <Badge variant={criticalAlerts.length > 0 ? 'critical' : 'warning'}>
+                                                {alerts.length} {t('common.new') ?? 'nuevas'}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <div className="p-2 max-h-80 overflow-y-auto">
+                                        {alerts.length === 0 ? (
+                                            <div className="flex flex-col items-center justify-center py-10 text-[var(--muted-foreground)]">
+                                                <Bell size={28} className="mb-3 opacity-30" />
+                                                <p className="text-sm font-medium">{t('common.noAlerts') ?? 'Sin alertas activas'}</p>
+                                            </div>
+                                        ) : (
+                                            alerts.map((alert: any, i: number) => (
+                                                <div key={i} className="flex items-start gap-3 px-3 py-3 rounded-[14px] hover:bg-[var(--secondary)] cursor-pointer">
+                                                    <div className={cn(
+                                                        "w-2 h-2 rounded-full mt-1.5 shrink-0",
+                                                        alert.critical ? "bg-red-500" : "bg-blue-500"
+                                                    )} />
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-[var(--foreground)]">{alert.title ?? 'Alerta'}</p>
+                                                        <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{alert.message}</p>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </motion.div>
+                            </>
+                        )}
+                    </AnimatePresence>
                 </div>
 
+                {/* User profile */}
                 <div className="relative">
                     <div
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        className="flex items-center gap-5 pl-6 border-l border-[var(--border)] cursor-pointer group"
+                        className="flex items-center gap-3 sm:gap-4 pl-4 sm:pl-6 border-l border-[var(--border)] cursor-pointer group"
                     >
                         <div className="text-right hidden md:block">
                             <p className="text-sm font-bold text-[var(--foreground)]">{user.name}</p>
-                            <div className="flex items-center justify-end gap-2 mt-0.5">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <div className="flex items-center justify-end gap-1.5 mt-0.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--muted-foreground)] leading-none font-mono">{user.role}</p>
                             </div>
                         </div>
-                        <div className="w-12 h-12 bg-[var(--foreground)] text-[var(--background)] rounded-[16px] flex items-center justify-center shadow-lg group-hover:border-[var(--climate-primary)] border-2 border-transparent transition-all overflow-hidden relative">
-                            <UserIcon size={22} className="group-hover:scale-110 transition-transform" />
+                        {/* #6 — Avatar con iniciales */}
+                        <div className="w-10 h-10">
+                            <UserAvatar name={user.name} role={user.role} />
                         </div>
                     </div>
 
@@ -245,9 +297,17 @@ export function Header({
                                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                                     className="absolute right-0 mt-4 w-64 bg-[var(--card)] border border-[var(--border)] rounded-[24px] shadow-2xl z-50 overflow-hidden p-2"
                                 >
-                                    <div className="px-5 py-4 border-b border-[var(--border)] md:hidden">
-                                        <p className="text-sm font-bold text-[var(--foreground)]">{user.name}</p>
-                                        <p className="text-[10px] font-bold uppercase text-[var(--muted-foreground)] tracking-wider font-mono">{user.role}</p>
+                                    {/* User info header in dropdown */}
+                                    <div className="px-4 py-3 mb-1 flex items-center gap-3 border-b border-[var(--border)]">
+                                        <div className="w-9 h-9 shrink-0">
+                                            <div className="w-full h-full rounded-[10px] overflow-hidden">
+                                                <UserAvatar name={user.name} role={user.role} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-[var(--foreground)]">{user.name}</p>
+                                            <p className="text-[10px] font-bold uppercase text-[var(--muted-foreground)] tracking-wider font-mono">{user.role}</p>
+                                        </div>
                                     </div>
 
                                     <div className="p-1 space-y-1">

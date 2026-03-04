@@ -86,9 +86,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const toggleTheme = useCallback(() => {
         setIsDarkMode(prev => {
             const next = !prev
-            document.documentElement.setAttribute('data-theme', next ? 'dark' : 'light')
+            const theme = next ? 'dark' : 'light'
+            document.documentElement.setAttribute('data-theme', theme)
+            localStorage.setItem('theme', theme)
             return next
         })
+    }, [])
+
+    // #7 — Restore persisted theme on mount
+    useEffect(() => {
+        const stored = localStorage.getItem('theme')
+        if (stored) {
+            setIsDarkMode(stored === 'dark')
+            document.documentElement.setAttribute('data-theme', stored)
+        }
     }, [])
 
     const menuItems = useMemo(() => [
