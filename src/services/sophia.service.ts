@@ -1,5 +1,6 @@
 import { FinanceSummary } from '@/types/finance';
-import { Order } from '@/types/operations';
+import { Order, Station } from '@/types/operations';
+import { SystemSettings, DEFAULT_SETTINGS } from '@/types/settings';
 import { SophiaAlert, MicroAgent, ChatMessage, AgentType } from '@/types/sophia';
 
 export const PRACTICAL_AGENTS: MicroAgent[] = [
@@ -8,6 +9,41 @@ export const PRACTICAL_AGENTS: MicroAgent[] = [
     { id: 'ag-hum', name: 'Agente 03: El Templo', type: 'HUMAN_CAPITAL', status: 'IDLE', lastReport: new Date().toISOString(), description: 'Gestiona la energía y el valor de los colaboradores.' },
     { id: 'ag-pro', name: 'Agente 04: Procesos', type: 'PROCESS', status: 'ACTIVE', lastReport: new Date().toISOString(), description: 'Optimiza la eficiencia técnica y márgenes.' }
 ];
+
+export function getPracticalAgentsStatus(finance?: FinanceSummary, orders: Order[] = [], stations: Station[] = []): MicroAgent[] {
+    const activeOrders = orders.filter(o => {
+        if (!stations.length) return true;
+        const sorted = [...stations].sort((a, b) => (b.order_index || 0) - (a.order_index || 0));
+        return o.currentStationId !== sorted[0].id;
+    }).length;
+
+    return [
+        {
+            id: 'ag-fin', name: 'Agente 01: Tesorería', type: 'FINANCE',
+            status: finance ? 'ACTIVE' : 'IDLE',
+            lastReport: new Date().toISOString(),
+            description: finance ? `Monitoreando flujo: $${finance.totalBalance.toLocaleString()} en caja.` : 'Esperando conexión con el sistema financiero.'
+        },
+        {
+            id: 'ag-ops', name: 'Agente 02: Matriz', type: 'OPERATIONS',
+            status: orders.length > 0 ? 'ACTIVE' : 'IDLE',
+            lastReport: new Date().toISOString(),
+            description: `Supervisando ${activeOrders} lotes activos y el ritmo general.`
+        },
+        {
+            id: 'ag-hum', name: 'Agente 03: El Templo', type: 'HUMAN_CAPITAL',
+            status: 'IDLE', // TODO: connect with users/employees table when available
+            lastReport: new Date().toISOString(),
+            description: 'En reposo. Esperando datos de colaboradores.'
+        },
+        {
+            id: 'ag-pro', name: 'Agente 04: Procesos', type: 'PROCESS',
+            status: stations.length > 0 ? 'ACTIVE' : 'IDLE',
+            lastReport: new Date().toISOString(),
+            description: `Optimizando ${stations.length} estaciones de producción.`
+        }
+    ];
+}
 
 export const HERMETIC_PRINCIPLES = [
     { id: 'her-men', name: 'Mentalismo', frequency: 963, chakra: 'Corona', health: 70, description: 'La consciencia de Sophia y sus 10 pilares' },
@@ -22,44 +58,51 @@ export const HERMETIC_PRINCIPLES = [
 export const MICRO_AGENTS = PRACTICAL_AGENTS; // Keep backward compatibility
 
 export class SophiaService {
-    static getGlobalAlerts(finance?: FinanceSummary, orders: Order[] = []): SophiaAlert[] {
+    static getGlobalAlerts(finance?: FinanceSummary, orders: Order[] = [], stations: Station[] = [], settings: SystemSettings = DEFAULT_SETTINGS): SophiaAlert[] {
         const alerts: SophiaAlert[] = [];
 
-        if (finance) {
-            if (finance.totalBalance < 5000) {
-                alerts.push({
-                    id: 'fin-01',
-                    agentId: 'ag-fin',
-                    type: 'CRITICAL',
-                    message: 'Alerta de Oxígeno: El balance de caja está por debajo del umbral de seguridad.',
-                    category: 'FINANCE',
-                    timestamp: new Date().toISOString()
-                });
-            }
+        // Cash threshold analysis
+        if (finance && finance.totalBalance < settings.criticalCashThreshold) {
+            alerts.push({
+                id: 'fin-01',
+                agentId: 'ag-fin',
+                type: 'CRITICAL',
+                message: `Oxígeno Crítico: El balance ($${finance.totalBalance.toLocaleString()}) ha caído por debajo del umbral de seguridad de $${settings.criticalCashThreshold.toLocaleString()}.`,
+                category: 'FINANCE',
+                timestamp: new Date().toISOString()
+            });
         }
 
         const urgentOrders = orders.filter(o => o.status === 'red');
-        if (urgentOrders.length > 2) {
+        if (urgentOrders.length > 0) {
             alerts.push({
                 id: 'ops-01',
                 agentId: 'ag-ops',
+                type: 'CRITICAL',
+                message: `Desequilibrio de Ritmo: Hay ${urgentOrders.length} lote(s) con retrasos críticos que requieren tu atención.`,
+                category: 'OPERATIONS',
+                timestamp: new Date().toISOString()
+            });
+        } else if (orders.filter(o => o.status === 'amber').length > 0) {
+            alerts.push({
+                id: 'ops-02',
+                agentId: 'ag-ops',
                 type: 'WARNING',
-                message: `Congestión Operativa: Se detectan ${urgentOrders.length} lotes con ritmo interrumpido.`,
+                message: `Atención Visual: Hay lotes en estado preventivo (Ámbar). Observa su flujo.`,
                 category: 'OPERATIONS',
                 timestamp: new Date().toISOString()
             });
         }
 
         // Bottleneck detection
-        const stations = ['est-1', 'est-2', 'est-3'];
-        stations.forEach(sid => {
-            const count = orders.filter(o => o.currentStationId === sid).length;
-            if (count > 5) {
+        stations.forEach(station => {
+            const count = orders.filter(o => o.currentStationId === station.id).length;
+            if (count >= 3) {
                 alerts.push({
-                    id: `bot-${sid}`,
+                    id: `bot-${station.id}`,
                     agentId: 'ag-ops',
                     type: 'WARNING',
-                    message: `Cuello de Botella: La estación ${sid === 'est-1' ? 'Recepción' : sid === 'est-2' ? 'Dividido' : 'Rebajado'} supera su capacidad óptima.`,
+                    message: `Cuello de Botella: La estación ${station.name} supera su capacidad óptima con ${count} lotes en cola.`,
                     category: 'PROCESS',
                     timestamp: new Date().toISOString()
                 });
@@ -69,27 +112,45 @@ export class SophiaService {
         return alerts;
     }
 
-    static generateProactiveAnalysis(finance?: FinanceSummary, orders: Order[] = []): string {
+    static generateProactiveAnalysis(finance?: FinanceSummary, orders: Order[] = [], stations: Station[] = [], settings: SystemSettings = DEFAULT_SETTINGS): string {
         const urgentCount = orders.filter(o => o.status === 'red').length;
-        const totalCount = orders.length;
+
+        let completedCount = 0;
+        let activeCount = orders.length;
+        if (stations.length > 0) {
+            const sortedStations = [...stations].sort((a, b) => (b.order_index || 0) - (a.order_index || 0));
+            const lastStationId = sortedStations[0].id;
+            completedCount = orders.filter(o => o.currentStationId === lastStationId).length;
+            activeCount = orders.length - completedCount;
+        }
+
         const balance = finance?.totalBalance || 0;
         const margin = finance?.profitMargin || 0;
 
-        let message = `**Reporte de Simetría Sophia** 🕯️\n\n`;
+        let message = `**Reporte de Simetría Sistémica** 🕯️\n\n`;
+
+        message += `📊 **Panorama Operativo:** De los ${orders.length} lotes históricos, tenemos **${activeCount} activos** procesándose y **${completedCount} ya completados**.\n\n`;
 
         if (urgentCount > 0) {
-            message += `🚨 **Interrupción de Ritmo:** He detectado ${urgentCount} lotes en estado crítico. La energía de la planta está bloqueada en la Matriz de Ritmos.\n\n`;
+            message += `🚨 **Interrupción de Ritmo:** He detectado **${urgentCount} lote(s) en estado crítico**. La energía de la planta está bloqueada en la Matriz operativa.\n\n`;
+        } else if (activeCount > 0) {
+            message += `✨ **Fluidez Operativa:** Los ritmos de producción están en sincronía. Los ${activeCount} lotes activos avanzan sin bloqueos significativos.\n\n`;
+        }
+
+        if (balance > settings.criticalCashThreshold * 5) {
+            message += `💰 **Abundancia:** El Agente de Tesorería reporta una salud financiera robusta con un balance de **$${balance.toLocaleString()}**. Es un momento propicio para la expansión operativa.\n\n`;
+        } else if (balance > settings.criticalCashThreshold) {
+            message += `⚖️ **Sustento:** La caja mantiene un balance de **$${balance.toLocaleString()}**. Sugiero vigilar los ciclos de facturación.\n\n`;
         } else {
-            message += `✨ **Fluidez Operativa:** Los ritmos de producción están en sincronía. No hay bloqueos significativos hoy.\n\n`;
+            message += `⚠️ **Oxígeno Limitado:** La presión financiera es alta. El balance está por debajo del umbral de **$${settings.criticalCashThreshold.toLocaleString()}**.\n\n`;
         }
 
-        if (balance > 10000 && margin > 15) {
-            message += `💰 **Abundancia:** El Agente de Tesorería reporta una salud financiera robusta ($${balance.toLocaleString()}). Es un buen momento para reinvertir en el Templo (Capital Humano).\n\n`;
-        } else if (balance < 5000) {
-            message += `⚠️ **Oxígeno Limitado:** La presión financiera es alta. Recomiendo priorizar los lotes de mayor margen para liberar flujo de caja.\n\n`;
+        if (settings.productionGoal > 0) {
+            const progress = (completedCount / settings.productionGoal) * 100;
+            message += `🎯 **Meta de Producción:** Llevas un **${progress.toFixed(1)}%** de avance hacia la meta de **${settings.productionGoal.toLocaleString()}** unidades.\n\n`;
         }
 
-        message += `🎯 **Acción Recomendada:** Realiza una auditoría visual en la Estación ${urgentCount > 2 ? '2' : '1'} para asegurar que la correspondencia entre lo digital y lo físico sea del 100%.`;
+        message += `🎯 **Acción Inspirada:** Asegúrate de revisar visualmente la correspondencia entre los lotes terminados y tu inventario final físico.`;
 
         return message;
     }

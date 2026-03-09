@@ -38,6 +38,7 @@ export interface Station {
     color: string;
     description?: string;
     orderCount: number;
+    order_index?: number;
 }
 
 export interface OperationSummary {

@@ -1,10 +1,19 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { OperationsService } from '@/services/operations.service'
 import { Order } from '@/types/operations'
-import { toast } from 'sonner'
+import { useNotifications } from '@/context/notification-context'
+import { useTranslation } from '@/context/language-context'
 
 export const useOperations = () => {
     const queryClient = useQueryClient()
+    const { addNotification } = useNotifications()
+    const { t } = useTranslation()
+
+    const stationsQuery = useQuery({
+        queryKey: ['stations'],
+        queryFn: () => OperationsService.getStations(),
+        staleTime: 1000 * 60 * 60, // 1 hour (stations rarely change)
+    })
 
     const ordersQuery = useQuery({
         queryKey: ['orders'],
@@ -26,10 +35,20 @@ export const useOperations = () => {
                 if (!old) return [updatedOrder]
                 return old.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             })
-            toast.success(`Orden ${updatedOrder.id} actualizada a ${updatedOrder.status}`)
+            queryClient.invalidateQueries({ queryKey: ['orders-summary'] })
+            addNotification({
+                type: updatedOrder.status === 'red' ? 'CRITICAL' : 'SUCCESS',
+                title: `${t('operations.batch')} ${updatedOrder.id}`,
+                message: `${t('operations.statusUpdatedTo')} ${updatedOrder.status}`,
+                actionUrl: `/dashboard/operaciones?order=${updatedOrder.id}`
+            })
         },
         onError: () => {
-            toast.error('Error al actualizar el estado de la orden')
+            addNotification({
+                type: 'ERROR',
+                title: t('common.error'),
+                message: t('operations.errorUpdatingStatus')
+            })
         }
     })
 
@@ -40,7 +59,13 @@ export const useOperations = () => {
                 if (!old) return [newOrder]
                 return [newOrder, ...old]
             })
-            toast.success(`Lote ${newOrder.id} escaneado correctamente`)
+            queryClient.invalidateQueries({ queryKey: ['orders-summary'] })
+            addNotification({
+                type: 'SUCCESS',
+                title: t('operations.newBatchIdentified'),
+                message: `${t('operations.batch')} ${newOrder.id} ${t('operations.sophiaRegistered')}`,
+                actionUrl: `/dashboard/operaciones?order=${newOrder.id}`
+            })
         }
     })
 
@@ -52,12 +77,25 @@ export const useOperations = () => {
                 if (!old) return [updatedOrder]
                 return old.map(o => o.id === updatedOrder.id ? updatedOrder : o)
             })
-            const stationName = updatedOrder.currentStationId === 'est-1' ? 'Recepción' : updatedOrder.currentStationId === 'est-2' ? 'Dividido' : 'Rebajado'
-            toast.success(`${updatedOrder.id} movido a ${stationName}`)
+            queryClient.invalidateQueries({ queryKey: ['orders-summary'] })
+            const stationName = stationsQuery.data?.find(s => s.id === updatedOrder.currentStationId)?.name || updatedOrder.currentStationId
+            addNotification({
+                type: 'INFO',
+                title: t('operations.transitLabel'),
+                message: `${updatedOrder.id} ${t('operations.movedTo')} ${stationName}`,
+                actionUrl: `/dashboard/operaciones?order=${updatedOrder.id}`
+            })
         }
     })
 
+    const getStationById = (id: string) => {
+        return stationsQuery.data?.find(s => s.id === id)
+    }
+
     return {
+        stations: stationsQuery.data || [],
+        isStationsLoading: stationsQuery.isLoading,
+        getStationById,
         orders: ordersQuery.data || [],
         isLoading: ordersQuery.isLoading,
         summary: summaryQuery.data,

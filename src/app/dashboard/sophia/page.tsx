@@ -27,10 +27,11 @@ import { useSophia } from '@/hooks/use-sophia'
 import { useTranslation } from '@/context/language-context'
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { SystemSymmetryPanel } from '@/components/system-symmetry-panel'
-import { toast } from 'sonner'
+import { useNotifications } from '@/context/notification-context'
 
 export default function SophiaPage() {
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
+    const { addNotification } = useNotifications()
     const {
         alerts,
         sophiaStatus,
@@ -78,11 +79,20 @@ export default function SophiaPage() {
         const file = e.target.files?.[0]
         if (!file) return
 
-        toast.promise(uploadToVault(file), {
-            loading: t('sophia.vault.uploading'),
-            success: (doc) => `${doc.name} ${t('sophia.vault.saved')}`,
-            error: t('sophia.vault.uploadError')
-        })
+        try {
+            const doc = await uploadToVault(file)
+            addNotification({
+                type: 'SUCCESS',
+                title: t('sophia.vault.saved'),
+                message: `${doc.name} ${t('sophia.vault.encryptionActive')}`
+            })
+        } catch (error) {
+            addNotification({
+                type: 'ERROR',
+                title: t('sophia.vault.uploadError'),
+                message: error instanceof Error ? error.message : 'Unknown error'
+            })
+        }
     }
 
     return (
@@ -97,7 +107,7 @@ export default function SophiaPage() {
                             {t('sophia.reasoning')}
                         </Badge>
                     </div>
-                    <h1 className="text-[32px] sm:text-[40px] font-bold tracking-tight text-[var(--foreground)] leading-tight">
+                    <h1 className="text-3xl lg:text-[36px] font-semibold tracking-tight text-[var(--foreground)] leading-tight">
                         {t('sophia.title')}
                     </h1>
                     <p className="text-[var(--muted-foreground)] text-lg font-medium transition-colors max-w-2xl">
@@ -109,13 +119,13 @@ export default function SophiaPage() {
                     <Card className="!bg-[var(--card)] !py-3 !px-6 border-none ring-1 ring-[var(--border)] shadow-sm flex items-center justify-center gap-4 w-full lg:w-auto">
                         <div className="flex items-center gap-2 border-r border-[var(--border)] pr-4">
                             <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                            <span className="text-[11px] font-bold text-blue-500 uppercase tracking-widest leading-none pt-0.5">{t('sophia.activeBrain')}</span>
+                            <span className="text-[13px] font-semibold text-blue-500">{t('sophia.activeBrain')}</span>
                         </div>
                         <div className="flex gap-1">
                             <button
                                 onClick={() => setActiveTab('CHAT')}
                                 className={cn(
-                                    "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                                    "px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all",
                                     activeTab === 'CHAT' ? "bg-blue-500 text-white shadow-sm" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                                 )}
                             >
@@ -124,7 +134,7 @@ export default function SophiaPage() {
                             <button
                                 onClick={() => setActiveTab('VAULT')}
                                 className={cn(
-                                    "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                                    "px-4 py-1.5 rounded-lg text-[13px] font-semibold transition-all",
                                     activeTab === 'VAULT' ? "bg-blue-500 text-white shadow-sm" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                                 )}
                             >
@@ -367,9 +377,11 @@ export default function SophiaPage() {
                             systemHealths={hermeticPrinciples.reduce((acc, p) => ({ ...acc, [p.id]: p.health }), {})}
                             overallHealth={82}
                             onActivate={() => {
-                                toast.success(t('sophia.syncInitiated'), {
-                                    description: t('sophia.realigning'),
-                                    icon: <RefreshCcw className="animate-spin" />
+                                generateDailyReport()
+                                addNotification({
+                                    type: 'INFO',
+                                    title: t('sophia.syncInitiated'),
+                                    message: t('sophia.realigning')
                                 })
                             }}
                         />

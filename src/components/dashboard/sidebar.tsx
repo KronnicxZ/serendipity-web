@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 
 interface MenuItem {
     name: string
+    description?: string
     icon: LucideIcon
     href: string
     roles: string[]
@@ -91,7 +92,17 @@ export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps)
                                     )}
                                 />
                                 {(isOpen || !isDesktop) && (
-                                    <span className="font-semibold text-[15px] whitespace-nowrap">{item.name}</span>
+                                    <div className="flex flex-col flex-1 overflow-hidden">
+                                        <span className="font-bold text-[15px] whitespace-nowrap leading-none mb-1">{item.name}</span>
+                                        {item.description && (
+                                            <span className={cn(
+                                                "text-[10px] font-medium uppercase tracking-tight truncate",
+                                                isActive ? "text-white/70" : "text-[var(--muted-foreground)]"
+                                            )}>
+                                                {item.description}
+                                            </span>
+                                        )}
+                                    </div>
                                 )}
                                 {(isOpen || !isDesktop) && isActive && (
                                     <motion.div layoutId="active-nav" className="absolute right-3">
@@ -107,8 +118,11 @@ export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps)
                                     "pointer-events-none opacity-0 group-hover/tooltip:opacity-100",
                                     "transition-opacity duration-150"
                                 )}>
-                                    <div className="bg-[var(--foreground)] text-[var(--background)] text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg whitespace-nowrap shadow-xl">
-                                        {item.name}
+                                    <div className="bg-[var(--foreground)] text-[var(--background)] p-3 rounded-xl whitespace-nowrap shadow-xl flex flex-col gap-0.5">
+                                        <span className="font-bold text-[13px]">{item.name}</span>
+                                        {item.description && (
+                                            <span className="text-[10px] opacity-70 font-medium uppercase tracking-wider">{item.description}</span>
+                                        )}
                                         {/* Arrow pointing left */}
                                         <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-[var(--foreground)]" />
                                     </div>

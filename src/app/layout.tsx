@@ -10,13 +10,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Serendipity Anthropos - Core",
+  title: "Serendipity OS",
   description: "El corazón consciente de Serendipity Bros",
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Anthropos',
+    title: 'Serendipity OS',
   },
   formatDetection: {
     telephone: false,

@@ -31,10 +31,23 @@ const MOCK_REPORTS: ReportData = {
     }
 };
 
+import { DateRange } from 'react-day-picker';
+import { isWithinInterval, parseISO } from 'date-fns';
+
 export class ReportsService {
-    static async getReportData(): Promise<ReportData> {
+    static async getReportData(dateRange?: DateRange): Promise<ReportData> {
         return new Promise((resolve) => {
-            setTimeout(() => resolve(MOCK_REPORTS), 150);
+            let data = { ...MOCK_REPORTS };
+
+            if (dateRange?.from) {
+                const to = dateRange.to || dateRange.from;
+                data.historicalMetrics = MOCK_REPORTS.historicalMetrics.filter(m => {
+                    const date = parseISO(m.date);
+                    return isWithinInterval(date, { start: dateRange.from!, end: to });
+                });
+            }
+
+            setTimeout(() => resolve(data), 150);
         });
     }
 }

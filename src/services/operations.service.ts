@@ -1,136 +1,197 @@
-import { Order, OperationSummary } from '@/types/operations'
+import { createClient } from '@/lib/supabase/client'
+import { Order, OperationSummary, Station } from '@/types/operations'
 
-// MOCK DATA for Phase 2 implementation
-// Initial data for the system
-const DEFAULT_ORDERS: Order[] = [
-    {
-        id: 'LOTE-2024-001',
-        qrCode: 'https://anthropos.io/qr/LOTE-2024-001',
-        status: 'amber',
-        customer: 'Prará Asia',
-        product: 'Vacuno Prime',
-        quantity: 450,
-        unit: 'SF',
-        dueDate: '2024-03-15T00:00:00Z',
-        createdAt: '2024-02-01T10:00:00Z',
-        updatedAt: '2024-02-24T14:00:00Z',
-        currentStationId: 'est-2',
-        stationHistory: [
-            { stationId: 'est-1', enteredAt: '2024-02-01T10:00:00Z', exitedAt: '2024-02-15T09:00:00Z' },
-            { stationId: 'est-2', enteredAt: '2024-02-15T09:00:00Z' }
-        ],
-        statusHistory: [
-            { status: 'red', timestamp: '2024-02-01T10:00:00Z', reason: 'Orden creada' },
-            { status: 'amber', timestamp: '2024-02-15T09:00:00Z', reason: 'Iniciado en Estación 2' }
-        ]
-    }
-];
-
-let MOCK_ORDERS: Order[] = [];
-
-// Helper to handle persistence
-const persist = (orders: Order[]) => {
-    if (typeof window !== 'undefined') {
-        localStorage.setItem('serendipity_orders', JSON.stringify(orders));
-    }
-};
-
-const load = (): Order[] => {
-    if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('serendipity_orders');
-        if (saved) return JSON.parse(saved);
-    }
-    return DEFAULT_ORDERS;
-};
-
-// Initialize
-if (MOCK_ORDERS.length === 0) {
-    MOCK_ORDERS = load();
-}
+const supabase = createClient()
 
 export const OperationsService = {
-    // ... items stay same
+    async getStations(): Promise<Station[]> {
+        if (!supabase) return [];
+        const { data, error } = await supabase
+            .from('stations')
+            .select('*')
+            .order('order_index', { ascending: true })
+
+        if (error) {
+            console.error("Error fetching stations:", error);
+            throw error;
+        }
+        return data as Station[];
+    },
+
     async getOrders(): Promise<Order[]> {
-        return new Promise((resolve) => {
-            setTimeout(() => resolve([...MOCK_ORDERS]), 150)
-        })
+        if (!supabase) return [];
+
+        const { data: ordersData, error: ordersError } = await supabase
+            .from('orders')
+            .select(`
+                *,
+                order_status_history (*),
+                order_station_movements (*)
+            `)
+            .order('created_at', { ascending: false })
+
+        if (ordersError) {
+            console.error("Error fetching orders:", ordersError)
+            throw ordersError
+        }
+
+        return ordersData.map(order => ({
+            id: order.id,
+            qrCode: order.qr_code,
+            status: order.status,
+            customer: order.customer,
+            product: order.product,
+            quantity: order.quantity,
+            unit: order.unit,
+            dueDate: order.due_date,
+            createdAt: order.created_at,
+            updatedAt: order.updated_at,
+            currentStationId: order.current_station_id,
+            notes: order.notes,
+            assignedTo: order.assigned_to,
+            statusHistory: order.order_status_history?.map((h: any) => ({
+                status: h.status,
+                timestamp: h.created_at,
+                reason: h.reason,
+                updatedBy: h.updated_by
+            })) || [],
+            stationHistory: order.order_station_movements?.map((m: any) => ({
+                stationId: m.station_id,
+                enteredAt: m.entered_at,
+                exitedAt: m.exited_at
+            })) || []
+        }))
     },
 
     async getSummary(): Promise<OperationSummary> {
+        if (!supabase) return { totalOrders: 0, activeOrders: 0, completedToday: 0, averageCycleTime: '0 días' }
+
+        const { data: stations } = await supabase.from('stations').select('id').order('order_index', { ascending: false }).limit(1)
+        const lastStationId = stations?.[0]?.id
+
+        if (!lastStationId) {
+            const { count: total } = await supabase.from('orders').select('*', { count: 'exact', head: true })
+            return {
+                totalOrders: total || 0,
+                activeOrders: total || 0,
+                completedToday: 0,
+                averageCycleTime: '0 días'
+            }
+        }
+
+        // Active: anything not in the last station
+        const { count: active } = await supabase.from('orders').select('*', { count: 'exact', head: true }).neq('current_station_id', lastStationId)
+        // Completed: anything in the last station
+        const { count: completed } = await supabase.from('orders').select('*', { count: 'exact', head: true }).eq('current_station_id', lastStationId)
+
+        const total = (active || 0) + (completed || 0)
+
         return {
-            totalOrders: MOCK_ORDERS.length + 6,
-            activeOrders: MOCK_ORDERS.length,
-            completedToday: 3,
+            totalOrders: total,
+            activeOrders: active || 0,
+            completedToday: completed || 0,
             averageCycleTime: '4.2 días'
         }
     },
 
     async updateStatus(orderId: string, status: Order['status'], reason?: string): Promise<Order> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const order = MOCK_ORDERS.find(o => o.id === orderId)
-                if (order) {
-                    order.status = status
-                    order.updatedAt = new Date().toISOString()
-                    order.statusHistory.push({
-                        status,
-                        timestamp: order.updatedAt,
-                        reason: reason || 'Actualización de flujo'
-                    })
-                    persist(MOCK_ORDERS)
-                    resolve({ ...order })
-                }
-            }, 150)
+        if (!supabase) throw new Error('No supabase client');
+
+        const { error: updateError } = await supabase
+            .from('orders')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', orderId)
+
+        if (updateError) throw updateError
+
+        const { data: userData } = await supabase.auth.getUser()
+
+        await supabase.from('order_status_history').insert({
+            order_id: orderId,
+            status,
+            reason,
+            updated_by: userData.user?.id
         })
+
+        const allOrders = await this.getOrders()
+        return allOrders.find(o => o.id === orderId)!
     },
 
     async moveToStation(orderId: string, stationId: string): Promise<Order> {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const order = MOCK_ORDERS.find(o => o.id === orderId)
-                if (order) {
-                    const now = new Date().toISOString()
-                    // Close current station
-                    const currentMove = order.stationHistory.find(h => h.stationId === order.currentStationId && !h.exitedAt)
-                    if (currentMove) {
-                        currentMove.exitedAt = now
-                    }
-                    // Open new station
-                    order.currentStationId = stationId
-                    order.stationHistory.push({
-                        stationId,
-                        enteredAt: now
-                    })
-                    order.updatedAt = now
-                    persist(MOCK_ORDERS)
-                    resolve({ ...order })
-                }
-            }, 150)
+        if (!supabase) throw new Error('No supabase client');
+
+        const now = new Date().toISOString()
+        const { data: userData } = await supabase.auth.getUser()
+
+        const { error: orderError } = await supabase
+            .from('orders')
+            .update({
+                current_station_id: stationId,
+                updated_at: now
+            })
+            .eq('id', orderId)
+
+        if (orderError) throw orderError
+
+        const { data: activeMovement } = await supabase
+            .from('order_station_movements')
+            .select('*')
+            .eq('order_id', orderId)
+            .is('exited_at', null)
+            .single()
+
+        if (activeMovement) {
+            await supabase.from('order_station_movements')
+                .update({ exited_at: now })
+                .eq('id', activeMovement.id)
+        }
+
+        await supabase.from('order_station_movements').insert({
+            order_id: orderId,
+            station_id: stationId,
+            entered_at: now,
+            handled_by: userData.user?.id
         })
+
+        const allOrders = await this.getOrders()
+        return allOrders.find(o => o.id === orderId)!
     },
 
     async createOrder(order: Partial<Order>): Promise<Order> {
-        return new Promise((resolve) => {
-            const now = new Date().toISOString()
-            const newOrder: Order = {
-                id: `LOTE-2024-${String(MOCK_ORDERS.length + 1).padStart(3, '0')}`,
-                qrCode: `https://anthropos.io/qr/LOTE-2024-${String(MOCK_ORDERS.length + 1).padStart(3, '0')}`,
-                status: 'red',
-                customer: order.customer || 'Cliente Prototipo',
-                product: order.product || 'Artículo de Prueba',
-                quantity: order.quantity || 100,
-                unit: order.unit || 'SF',
-                dueDate: new Date(Date.now() + 86400000 * 5).toISOString(),
-                createdAt: now,
-                updatedAt: now,
-                currentStationId: order.currentStationId || 'est-1',
-                stationHistory: [{ stationId: order.currentStationId || 'est-1', enteredAt: now }],
-                statusHistory: [{ status: 'red', timestamp: now, reason: 'Escaneo inicial' }],
-                ...order
-            } as Order
-            MOCK_ORDERS.unshift(newOrder)
-            persist(MOCK_ORDERS)
-            setTimeout(() => resolve({ ...newOrder }), 150)
+        if (!supabase) throw new Error('No supabase client');
+        const now = new Date().toISOString()
+        const qrCode = `https://anthropos.io/qr/${Date.now()}`
+        const { data: userData } = await supabase.auth.getUser()
+
+        const { data, error } = await supabase.from('orders').insert({
+            qr_code: qrCode,
+            status: order.status || 'amber',
+            customer: order.customer || 'Cliente Prototipo',
+            product: order.product || 'Materia Prima',
+            quantity: order.quantity || 100,
+            unit: order.unit || 'Kg',
+            due_date: order.dueDate || new Date(Date.now() + 86400000 * 5).toISOString(),
+            current_station_id: order.currentStationId,
+            assigned_to: userData.user?.id
+        }).select().single()
+
+        if (error) throw error
+
+        await supabase.from('order_status_history').insert({
+            order_id: data.id,
+            status: data.status,
+            reason: 'Escaneo Inicial',
+            updated_by: userData.user?.id
         })
+
+        await supabase.from('order_station_movements').insert({
+            order_id: data.id,
+            station_id: data.current_station_id,
+            entered_at: now,
+            handled_by: userData.user?.id
+        })
+
+        const allOrders = await this.getOrders()
+        return allOrders.find(o => o.id === data.id)!
     }
 }

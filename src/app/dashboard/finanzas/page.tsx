@@ -46,90 +46,91 @@ export default function FinanzasPage() {
 
     return (
         <div className="space-y-12">
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
                 <div className="space-y-2">
-                    <Badge variant="success" className="mb-2">{t('finances.solvencyGuarantee')}</Badge>
-                    <h1 className="text-[32px] sm:text-[40px] font-bold tracking-tight text-[var(--foreground)] leading-tight">
+                    <Badge variant="success" className="mb-2 px-3 py-1 bg-emerald-500/10 text-emerald-500 border-none font-medium text-xs">{t('finances.solvencyGuarantee')}</Badge>
+                    <h1 className="text-3xl lg:text-[36px] font-semibold tracking-tight text-[var(--foreground)]">
                         {t('finances.title')}
                     </h1>
-                    <p className="text-[var(--muted-foreground)] text-lg font-medium">{t('finances.subtitle')}</p>
+                    <p className="text-[var(--muted-foreground)] text-base font-medium">{t('finances.subtitle')}</p>
                 </div>
-                <Card className="!bg-[var(--card)] !py-3 !px-6 border-none ring-1 ring-[var(--border)] shadow-sm flex items-center justify-center gap-3 w-full lg:w-auto">
-                    <div className="w-2 h-2 rounded-full bg-blue-500" />
-                    <span className="text-[11px] font-bold text-blue-500 uppercase tracking-widest leading-none pt-0.5">{t('finances.leaderAccess')}</span>
+                <Card className="bg-[var(--card)] py-3 px-6 rounded-[20px] border-none ring-1 ring-[var(--border)] shadow-sm flex items-center justify-center gap-3 w-full lg:w-auto">
+                    <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    <span className="text-[13px] font-semibold text-blue-500">{t('finances.leaderAccess')}</span>
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                <Card className="p-10 space-y-10 border-none ring-1 ring-[var(--border)] shadow-sm overflow-hidden relative">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+                <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm overflow-hidden relative bg-[var(--card)]">
                     <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50 z-0", finData.climate.weatherClass)} />
                     <div className="relative z-10 flex items-center gap-4">
-                        <div className="p-3 bg-blue-500/10 text-blue-500 rounded-[14px]">
-                            <ShieldCheck size={24} />
+                        <div className="w-12 h-12 flex items-center justify-center bg-blue-500/10 text-blue-500 rounded-[16px] border border-blue-500/20">
+                            <ShieldCheck size={20} strokeWidth={2} />
                         </div>
                         <div>
-                            <h3 className="font-bold text-[var(--foreground)] text-xl tracking-tight transition-colors">{t('finances.reserveFund')}</h3>
+                            <h3 className="font-semibold text-[var(--foreground)] text-xl tracking-tight transition-colors">{t('finances.reserveFund')}</h3>
                             <p className="text-sm text-[var(--muted-foreground)] font-medium whitespace-nowrap">{t('finances.projectedBacking')}</p>
                         </div>
                     </div>
 
-                    <div className="relative z-10 space-y-4">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
-                            <p className="text-4xl font-bold text-[var(--foreground)] tracking-tighter">${finData.reserveFund.toLocaleString()}</p>
-                            <p className="text-sm font-bold text-[var(--muted-foreground)] uppercase tracking-widest">{t('finances.target')}: ${finData.reserveTarget.toLocaleString()}</p>
+                    <div className="relative z-10 space-y-6">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 border-b border-[var(--border)] pb-6">
+                            <p className="text-4xl sm:text-5xl font-semibold text-[var(--foreground)] tracking-tight">${finData.reserveFund.toLocaleString()}</p>
+                            <p className="text-[13px] font-medium text-[var(--muted-foreground)] mb-1">{t('finances.target')}: ${finData.reserveTarget.toLocaleString()}</p>
                         </div>
-                        <div className="h-5 bg-[var(--secondary)] rounded-full overflow-hidden shadow-inner border border-[var(--border)] p-1">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(finData.reserveFund / finData.reserveTarget) * 100}%` }}
-                                transition={{ duration: 2, ease: [0.23, 1, 0.32, 1] }}
-                                className="h-full bg-blue-600 rounded-full shadow-lg shadow-blue-600/20"
-                            />
-                        </div>
-                        <div className="flex items-start gap-4 p-5 bg-[var(--foreground)]/5 rounded-2xl border border-[var(--border)] relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity -mr-4 -mt-4">
-                                <ClimateIconMap icon={finData.climate.icon} className="w-24 h-24 rotate-12" />
+
+                        <div className="space-y-3">
+                            <div className="h-4 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)] p-0.5 shadow-inner">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(finData.reserveFund / finData.reserveTarget) * 100}%` }}
+                                    transition={{ duration: 2, ease: [0.23, 1, 0.32, 1] }}
+                                    className="h-full bg-blue-500 rounded-full"
+                                />
                             </div>
-                            <div className="p-2 bg-[var(--foreground)]/10 rounded-lg text-[var(--foreground)] shrink-0">
-                                <ClimateIconMap icon={finData.climate.icon} className="w-5 h-5" />
+                            <div className="flex items-start gap-4 p-4 bg-[var(--background)] rounded-[20px] border border-[var(--border)] relative overflow-hidden group">
+                                <div className="p-2.5 bg-[var(--secondary)] rounded-[12px] text-[var(--foreground)] shrink-0 border border-[var(--border)] shadow-sm">
+                                    <ClimateIconMap icon={finData.climate.icon} className="w-4 h-4" />
+                                </div>
+                                <p className="text-[13px] text-[var(--muted-foreground)] font-medium leading-relaxed pt-1 relative z-10">
+                                    {finData.climate.message}
+                                </p>
                             </div>
-                            <p className="text-sm text-[var(--muted-foreground)] font-medium leading-relaxed pt-0.5 relative z-10">
-                                {finData.climate.message}
-                            </p>
                         </div>
                     </div>
                 </Card>
 
-                <Card className="p-10 space-y-10 border-none bg-[var(--foreground)] text-[var(--background)] shadow-2xl relative overflow-hidden transition-colors duration-500">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -mr-32 -mt-32" />
+                <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)] relative overflow-hidden transition-colors duration-500">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                     <div className="flex items-center gap-4 relative z-10">
-                        <div className="p-3 bg-[var(--background)]/10 text-blue-400 rounded-[14px]">
-                            <TrendingUp size={24} />
+                        <div className="w-12 h-12 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-[16px] border border-emerald-500/20">
+                            <TrendingUp size={20} strokeWidth={2} />
                         </div>
                         <div>
-                            <h3 className="font-bold text-xl tracking-tight transition-colors">{t('finances.amortization')}</h3>
-                            <p className="text-sm text-[var(--background)]/40 font-medium">{t('finances.debtSchedule')}</p>
+                            <h3 className="font-semibold text-xl text-[var(--foreground)] tracking-tight transition-colors">{t('finances.amortization')}</h3>
+                            <p className="text-sm text-[var(--muted-foreground)] font-medium">{t('finances.debtSchedule')}</p>
                         </div>
                     </div>
 
-                    <div className="space-y-4 relative z-10">
-                        <div className="flex justify-between items-end">
-                            <p className="text-4xl font-bold tracking-tighter transition-colors">${finData.debtRemaining.toLocaleString()}</p>
-                            <div className="text-right">
-                                <p className="text-xs font-bold text-[var(--background)]/40 uppercase tracking-widest mb-1">{t('finances.remainingOf')}</p>
-                                <p className="text-[15px] font-bold text-[var(--background)]/60">${finData.debtTotal.toLocaleString()}</p>
+                    <div className="space-y-6 relative z-10">
+                        <div className="flex justify-between items-end border-b border-[var(--border)] pb-6">
+                            <p className="text-4xl sm:text-5xl font-semibold tracking-tight text-[var(--foreground)] transition-colors">${finData.debtRemaining.toLocaleString()}</p>
+                            <div className="text-right pb-1">
+                                <p className="text-[11px] font-medium text-[var(--muted-foreground)] mb-0.5">{t('finances.remainingOf')}</p>
+                                <p className="text-[14px] font-semibold text-[var(--foreground)]">${finData.debtTotal.toLocaleString()}</p>
                             </div>
                         </div>
-                        <div className="h-5 bg-[var(--background)]/5 rounded-full overflow-hidden border border-[var(--background)]/10 p-1">
-                            <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${(1 - finData.debtRemaining / finData.debtTotal) * 100}%` }}
-                                transition={{ duration: 2.5, ease: [0.23, 1, 0.32, 1] }}
-                                className="h-full bg-red-500 rounded-full shadow-lg shadow-red-500/40"
-                            />
-                        </div>
-                        <div className="pt-6">
-                            <Button variant="secondary" className="w-full !bg-[var(--background)]/10 !text-[var(--background)] !border-[var(--background)]/10 hover:!bg-[var(--background)]/20 h-14 !rounded-[20px] font-bold transition-all">
+
+                        <div className="space-y-6">
+                            <div className="h-4 bg-[var(--background)] rounded-full overflow-hidden border border-[var(--border)] p-0.5 shadow-inner">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${(1 - finData.debtRemaining / finData.debtTotal) * 100}%` }}
+                                    transition={{ duration: 2.5, ease: [0.23, 1, 0.32, 1] }}
+                                    className="h-full bg-emerald-500 rounded-full"
+                                />
+                            </div>
+                            <Button variant="ghost" className="w-full rounded-[16px] h-12 font-medium bg-[var(--background)] hover:bg-[var(--secondary)] border border-[var(--border)] shadow-sm text-[var(--foreground)] transition-all">
                                 {t('finances.analyzePlan')}
                             </Button>
                         </div>
@@ -138,18 +139,18 @@ export default function FinanzasPage() {
             </div>
 
             {/* Expenses Breakdown */}
-            <Card className="p-10 border-none ring-1 ring-[var(--border)] shadow-sm">
+            <Card className="p-8 lg:p-10 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)]">
                 <div className="flex items-center gap-3 mb-8">
                     <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-                    <h4 className="font-bold text-[var(--foreground)] text-lg tracking-tight">{t('finances.expenseStructure')}</h4>
+                    <h4 className="font-semibold text-[var(--foreground)] text-lg tracking-tight">{t('finances.expenseStructure')}</h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {finData.expensesByCategory.map((exp) => (
-                        <div key={exp.category} className="space-y-4">
-                            <div className="flex justify-between items-center text-sm font-bold">
-                                <span className="text-[var(--muted-foreground)]">{exp.category}</span>
-                                <span className="text-[var(--foreground)]">${exp.amount.toLocaleString()}</span>
+                        <div key={exp.category} className="space-y-3 bg-[var(--background)] p-5 rounded-[20px] border border-[var(--border)]">
+                            <div className="flex justify-between items-center text-[14px] font-semibold">
+                                <span className="text-[var(--foreground)]">{exp.category}</span>
                             </div>
+                            <p className="text-xl font-semibold text-[var(--foreground)]">${exp.amount.toLocaleString()}</p>
                             <div className="h-2 bg-[var(--secondary)] rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
@@ -157,7 +158,7 @@ export default function FinanzasPage() {
                                     className={cn("h-full rounded-full", exp.color)}
                                 />
                             </div>
-                            <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest">{exp.percentage}% {t('finances.totalOf')}</p>
+                            <p className="text-[12px] font-medium text-[var(--muted-foreground)]">{exp.percentage}% {t('finances.totalOf')}</p>
                         </div>
                     ))}
                 </div>

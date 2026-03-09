@@ -7,28 +7,18 @@ import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { Order } from '@/types/operations'
 import { useTranslation } from '@/context/language-context'
-
-interface Station {
-    id: string
-    name: string
-    description: string
-    icon: any
-    color: string
-}
+import { useOperations } from '@/hooks/use-operations'
 
 export function StationTracker({ orders, onStationClick }: { orders: Order[], onStationClick?: (stationId: string) => void }) {
     const { t } = useTranslation()
+    const { stations } = useOperations()
     const getCount = (id: string) => orders.filter(o => o.currentStationId === id).length
 
-    const STATIONS: Station[] = [
-        { id: 'est-1', name: t('operations.reception'), description: t('operations.receptionDesc'), icon: CheckCircle2, color: 'text-blue-500' },
-        { id: 'est-2', name: t('operations.split'), description: t('operations.splitDesc'), icon: Play, color: 'text-blue-500' },
-        { id: 'est-3', name: t('operations.shaved'), description: t('operations.shavedDesc'), icon: Clock, color: 'text-blue-500' },
-    ]
+    if (!stations || stations.length === 0) return null
 
     return (
-        <Card bio className="p-8 border-none ring-1 ring-[var(--climate-border)] shadow-sm">
-            <div className="flex items-center justify-between mb-8">
+        <Card bio className="p-8 border-none ring-1 ring-[var(--climate-border)] shadow-sm overflow-x-auto hide-scrollbar">
+            <div className="flex items-center justify-between mb-8 min-w-max">
                 <div>
                     <h3 className="text-xl font-bold text-[var(--foreground)] tracking-tight">{t('operations.physicalSyncMap')}</h3>
                     <p className="text-sm text-[var(--muted-foreground)] font-medium">{t('operations.stationDistribution')}</p>
@@ -36,29 +26,32 @@ export function StationTracker({ orders, onStationClick }: { orders: Order[], on
                 <Badge variant="success">{t('common.realtime')}</Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-                {STATIONS.map((station, idx) => {
+            <div className="flex gap-6 relative min-w-max pb-2">
+                {stations.map((station, idx) => {
                     const count = getCount(station.id)
-                    const isLast = idx === STATIONS.length - 1
+                    const isLast = idx === stations.length - 1
+                    const IconComp = idx === 0 ? CheckCircle2 : idx === stations.length - 1 ? Clock : Play;
 
                     return (
-                        <div key={station.id} className="relative flex flex-col items-center">
+                        <div key={station.id} className="relative flex min-w-[280px] flex-col items-center flex-1">
                             <motion.div
                                 onClick={() => onStationClick?.(station.id)}
                                 whileHover={{ scale: 1.02 }}
                                 className={cn(
-                                    "w-full p-6 rounded-[28px] border transition-all duration-500 cursor-pointer group",
+                                    "w-full h-full p-6 rounded-[28px] border transition-all duration-500 cursor-pointer group flex flex-col justify-between",
                                     count > 0 ? "bg-[var(--secondary)]/40 border-[var(--climate-primary)]/20 shadow-lg shadow-[var(--climate-glow)]" : "bg-transparent border-[var(--border)] opacity-60"
                                 )}
                             >
                                 <div className="flex items-center justify-between mb-4">
-                                    <div className={cn("p-2 rounded-xl bg-[var(--background)] shadow-sm", station.color)}>
-                                        <station.icon size={20} />
+                                    <div className={cn("p-2 rounded-xl bg-[var(--background)] shadow-sm text-blue-500", station.color)}>
+                                        <IconComp size={20} />
                                     </div>
                                     <span className="text-2xl font-black text-[var(--foreground)]">{count}</span>
                                 </div>
-                                <h4 className="font-bold text-[var(--foreground)]">{station.name}</h4>
-                                <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest mt-1">{station.description}</p>
+                                <div>
+                                    <h4 className="font-bold text-[var(--foreground)]">{station.name}</h4>
+                                    <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest mt-1 line-clamp-2">{station.description}</p>
+                                </div>
                             </motion.div>
 
                             {!isLast && (

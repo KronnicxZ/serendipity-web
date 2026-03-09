@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { ReportsService } from '@/services/reports.service'
 
-export function useReports() {
+import { DateRange } from 'react-day-picker'
+
+export function useReports(dateRange?: DateRange) {
     return useQuery({
-        queryKey: ['reports-data'],
-        queryFn: () => ReportsService.getReportData(),
+        queryKey: ['reports-data', dateRange],
+        queryFn: () => ReportsService.getReportData(dateRange),
         staleTime: 1000 * 60 * 15, // 15 minutes
     })
 }

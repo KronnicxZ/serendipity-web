@@ -10,7 +10,7 @@ type Language = 'es' | 'en' | 'vn'
 interface LanguageContextType {
     language: Language
     setLanguage: (lang: Language) => void
-    t: (path: string) => string
+    t: (path: string, params?: Record<string, string | number>) => string
     isReady: boolean
 }
 
@@ -35,7 +35,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('anthropos-lang', lang)
     }
 
-    const t = (path: string): string => {
+    const t = (path: string, params?: Record<string, string | number>): string => {
         const keys = path.split('.')
         let result: any = dictionaries[language]
 
@@ -47,7 +47,15 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        return typeof result === 'string' ? result : path
+        if (typeof result !== 'string') return path
+
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                result = result.replaceAll(`{{${key}}}`, String(value))
+            })
+        }
+
+        return result
     }
 
     return (

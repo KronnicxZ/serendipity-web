@@ -17,9 +17,23 @@ const generateMockMetrics = (): MetricDay[] => {
     })
 }
 
+import { DateRange } from 'react-day-picker'
+import { isWithinInterval, parseISO } from 'date-fns'
+
 export const DashboardService = {
-    async getDashboardData(): Promise<DashboardData> {
+    async getDashboardData(dateRange?: DateRange): Promise<DashboardData> {
         return new Promise((resolve) => {
+            const allMetrics = generateMockMetrics();
+            let filteredMetrics = allMetrics;
+
+            if (dateRange?.from) {
+                const to = dateRange.to || dateRange.from;
+                filteredMetrics = allMetrics.filter(m => {
+                    const date = parseISO(m.date);
+                    return isWithinInterval(date, { start: dateRange.from!, end: to });
+                });
+            }
+
             setTimeout(() => {
                 resolve({
                     stats: {
@@ -31,7 +45,7 @@ export const DashboardService = {
                         errorRate: 2.4,
                         onTimeDeliveryRate: 98.2
                     },
-                    metrics: generateMockMetrics(),
+                    metrics: filteredMetrics,
                     trend: {
                         status: 'subiendo',
                         liquidityLevel: 'alta',
@@ -63,6 +77,6 @@ export const DashboardService = {
                     ]
                 })
             }, 150)
-        })
+        });
     }
 }

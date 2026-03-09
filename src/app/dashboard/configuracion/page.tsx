@@ -6,9 +6,19 @@ import { Settings, Bell, Globe, Lock, Shield, UserCheck, ShieldAlert, Cpu, Datab
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/context/language-context'
 
+import { useSettings } from '@/hooks/use-settings'
+import { toast } from 'sonner'
+
 export default function ConfiguracionPage() {
     const { t } = useTranslation()
+    const { settings, updateSettings, updateNestedSetting } = useSettings()
     const [activeTab, setActiveTab] = useState('GLOBAL')
+
+    const handleSave = () => {
+        toast.success(t('common.success'), {
+            description: t('temple.updatedSuccess')
+        })
+    }
 
     const tabs = [
         { id: 'GLOBAL', n: t('temple.globalParams'), i: Globe },
@@ -22,7 +32,7 @@ export default function ConfiguracionPage() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div className="space-y-2">
                     <Badge variant="default" className="mb-2">{t('common.parametrization')}</Badge>
-                    <h1 className="text-[32px] sm:text-[40px] font-bold tracking-tight text-[var(--foreground)] leading-tight">
+                    <h1 className="text-3xl lg:text-[36px] font-semibold tracking-tight text-[var(--foreground)] leading-tight">
                         {t('temple.title')}
                     </h1>
                     <p className="text-[var(--muted-foreground)] text-lg font-medium transition-colors">{t('temple.subtitle')}</p>
@@ -60,11 +70,21 @@ export default function ConfiguracionPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                     <div className="space-y-3">
                                         <label className="text-[11px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] ml-1">{t('temple.productionGoal')}</label>
-                                        <Input defaultValue="150,000" className="h-14 !rounded-[16px] border border-[var(--border)] bg-[var(--secondary)]/50 focus:bg-[var(--card)] transition-all font-bold text-lg" />
+                                        <Input
+                                            type="number"
+                                            value={settings.productionGoal}
+                                            onChange={(e) => updateSettings({ productionGoal: Number(e.target.value) })}
+                                            className="h-14 !rounded-[16px] border border-[var(--border)] bg-[var(--secondary)]/50 focus:bg-[var(--card)] transition-all font-bold text-lg"
+                                        />
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[11px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] ml-1">{t('temple.criticalCashThreshold')}</label>
-                                        <Input defaultValue="2,000" className="h-14 !rounded-[16px] border border-[var(--border)] bg-[var(--secondary)]/50 focus:bg-[var(--card)] transition-all font-bold text-lg" />
+                                        <Input
+                                            type="number"
+                                            value={settings.criticalCashThreshold}
+                                            onChange={(e) => updateSettings({ criticalCashThreshold: Number(e.target.value) })}
+                                            className="h-14 !rounded-[16px] border border-[var(--border)] bg-[var(--secondary)]/50 focus:bg-[var(--card)] transition-all font-bold text-lg"
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -72,20 +92,32 @@ export default function ConfiguracionPage() {
                             <div className="space-y-6 pt-6 border-t border-[var(--border)]">
                                 <h4 className="text-[11px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em]">{t('temple.activeEngines')}</h4>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="p-4 rounded-xl bg-[var(--secondary)]/30 border border-[var(--border)] flex items-center gap-4">
-                                        <Cpu size={20} className="text-amber-500" />
+                                    <button
+                                        onClick={() => updateSettings({ reinvestmentLogicEnabled: !settings.reinvestmentLogicEnabled })}
+                                        className={cn(
+                                            "p-4 rounded-xl border transition-all flex items-center gap-4 text-left w-full",
+                                            settings.reinvestmentLogicEnabled ? "bg-amber-500/10 border-amber-500/20" : "bg-[var(--secondary)]/30 border-[var(--border)] opacity-60"
+                                        )}
+                                    >
+                                        <Cpu size={20} className={settings.reinvestmentLogicEnabled ? "text-amber-500" : "text-[var(--muted-foreground)]"} />
                                         <div>
                                             <p className="text-sm font-bold">{t('temple.reinvestmentLogic')}</p>
                                             <p className="text-[10px] text-[var(--muted-foreground)] font-medium">{t('temple.frequency')}: 24h</p>
                                         </div>
-                                    </div>
-                                    <div className="p-4 rounded-xl bg-[var(--secondary)]/30 border border-[var(--border)] flex items-center gap-4">
-                                        <Database size={20} className="text-emerald-500" />
+                                    </button>
+                                    <button
+                                        onClick={() => updateSettings({ hybridRedundancyEnabled: !settings.hybridRedundancyEnabled })}
+                                        className={cn(
+                                            "p-4 rounded-xl border transition-all flex items-center gap-4 text-left w-full",
+                                            settings.hybridRedundancyEnabled ? "bg-emerald-500/10 border-emerald-500/20" : "bg-[var(--secondary)]/30 border-[var(--border)] opacity-60"
+                                        )}
+                                    >
+                                        <Database size={20} className={settings.hybridRedundancyEnabled ? "text-emerald-500" : "text-[var(--muted-foreground)]"} />
                                         <div>
                                             <p className="text-sm font-bold">{t('temple.hybridRedundancy')}</p>
-                                            <p className="text-[10px] text-[var(--muted-foreground)] font-medium">{t('temple.status')}: {t('common.synchronized')}</p>
+                                            <p className="text-[10px] text-[var(--muted-foreground)] font-medium">{t('temple.status')}: {settings.hybridRedundancyEnabled ? t('common.synchronized') : t('common.disconnected')}</p>
                                         </div>
-                                    </div>
+                                    </button>
                                 </div>
                             </div>
                         </section>
@@ -100,11 +132,11 @@ export default function ConfiguracionPage() {
                                 </div>
                                 <div className="space-y-4">
                                     {[
-                                        { n: 'Slack (Anthropos-Alerts)', i: MessageSquare, s: true, desc: t('temple.slackDesc') },
-                                        { n: t('temple.adminEmail'), i: Mail, s: true, desc: t('temple.adminEmailDesc') },
-                                        { n: t('temple.pushNotifications'), i: Bell, s: false, desc: t('temple.pushNotificationsDesc') },
+                                        { n: 'Slack (Anthropos-Alerts)', i: MessageSquare, s: settings.notifications.slack, desc: t('temple.slackDesc') },
+                                        { n: t('temple.adminEmail'), i: Mail, s: settings.notifications.email, desc: t('temple.adminEmailDesc') },
+                                        { n: t('temple.pushNotifications'), i: Bell, s: settings.notifications.push, desc: t('temple.pushNotificationsDesc') },
                                     ].map(ch => (
-                                        <div key={ch.n} className="flex items-center justify-between p-6 rounded-[20px] bg-[var(--secondary)]/30 border border-[var(--border)]">
+                                        <div key={ch.n} className="flex items-center justify-between p-6 rounded-[20px] bg-[var(--secondary)]/30 border border-[var(--border)] transition-all">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 bg-[var(--card)] rounded-xl border border-[var(--border)]">
                                                     <ch.i size={20} className={ch.s ? "text-blue-500" : "text-[var(--muted-foreground)]"} />
@@ -114,7 +146,17 @@ export default function ConfiguracionPage() {
                                                     <p className="text-xs text-[var(--muted-foreground)]">{ch.desc}</p>
                                                 </div>
                                             </div>
-                                            <Button variant={ch.s ? "secondary" : "ghost"} size="sm" className="font-bold">{ch.s ? t('common.active') : t('common.connect')}</Button>
+                                            <Button
+                                                variant={ch.s ? "secondary" : "ghost"}
+                                                size="sm"
+                                                className="font-bold"
+                                                onClick={() => {
+                                                    const key = ch.n.includes('Slack') ? 'slack' : ch.n.includes('Mail') || ch.n.includes('Email') ? 'email' : 'push';
+                                                    updateNestedSetting('notifications', { [key]: !ch.s });
+                                                }}
+                                            >
+                                                {ch.s ? t('common.active') : t('common.connect')}
+                                            </Button>
                                         </div>
                                     ))}
                                 </div>
@@ -178,9 +220,12 @@ export default function ConfiguracionPage() {
 
                     <section className="pt-10 border-t border-[var(--border)] flex flex-col sm:flex-row justify-end gap-4">
                         <Button variant="ghost" className="px-8 font-bold text-[var(--muted-foreground)] w-full sm:w-auto h-12 sm:h-auto hover:text-[var(--foreground)]">{t('temple.reset')}</Button>
-                        <Button className="px-6 sm:px-12 py-4 min-h-[56px] h-auto !rounded-[18px] shadow-lg text-sm sm:text-base w-full sm:w-auto flex-col sm:flex-row items-center justify-center text-center">
+                        <Button
+                            className="px-6 sm:px-12 py-4 min-h-[56px] h-auto !rounded-[18px] shadow-lg text-sm sm:text-base w-full sm:w-auto flex-col sm:flex-row items-center justify-center text-center"
+                            onClick={handleSave}
+                        >
                             <span>{t('temple.update')}</span>
-                            <span className="sm:ml-1 text-[10px] sm:text-inherit opacity-80 sm:opacity-100 uppercase sm:normal-case font-black sm:font-bold">
+                            <span className="sm:ml-1 text-[10px] sm:text-inherit opacity-80 sm:opacity-100 uppercase sm:normal-case font-black sm:font-bold border-l border-white/20 sm:border-none pl-2 sm:pl-0 sm:pt-0">
                                 {tabs.find(t_ => t_.id === activeTab)?.n}
                             </span>
                         </Button>

@@ -22,7 +22,6 @@ import { cn } from '@/lib/utils'
 import { CommandPalette } from '@/components/command-palette'
 import { useSophia } from '@/hooks/use-sophia'
 import { useFinancialClimate } from '@/hooks/use-financial-climate'
-import { toast } from 'sonner'
 import { useTranslation } from '@/context/language-context'
 
 // Optimized subcomponents
@@ -31,17 +30,42 @@ import { Header } from '@/components/dashboard/header'
 import { MobileNav } from '@/components/dashboard/mobile-nav'
 import { LoadingScreen } from '@/components/loading-screen'
 import { FloatingSophia } from '@/components/floating-sophia'
+import { useNotifications } from '@/context/notification-context'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user, logout, loading } = useAuth()
     const { t } = useTranslation()
+    const { notifications } = useNotifications()
     const router = useRouter()
     const pathname = usePathname()
     const [isSidebarOpen, setSidebarOpen] = useState(false)
     const [isDesktop, setIsDesktop] = useState(true)
     const [isDarkMode, setIsDarkMode] = useState(false)
 
-    const { alerts, hasAlerts, criticalAlerts } = useSophia()
+    const { alerts: sophiaAlerts } = useSophia()
+
+    const mergedAlerts = useMemo(() => {
+        const mappedNotifications = notifications.map(n => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            critical: n.type === 'CRITICAL' || n.type === 'ERROR',
+            timestamp: n.timestamp,
+            isSophia: false
+        }))
+        const mappedSophia = (sophiaAlerts || []).map(a => ({
+            id: a.id,
+            title: t('sophia.title'),
+            message: a.message,
+            critical: a.type === 'CRITICAL',
+            timestamp: a.timestamp,
+            isSophia: true
+        }))
+        return [...mappedNotifications, ...mappedSophia]
+    }, [notifications, sophiaAlerts, t])
+
+    const hasAlerts = mergedAlerts.length > 0
+    const criticalAlerts = mergedAlerts.filter(a => a.critical)
     const climate = useFinancialClimate()
 
     const ClimateIconComp = useMemo(() => {
@@ -57,14 +81,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
     }, [climate])
 
-    useEffect(() => {
-        if (criticalAlerts.length > 0) {
-            toast.error('Sophia: Anomalías críticas detectadas', {
-                description: criticalAlerts[0].message,
-                duration: 4000
-            })
-        }
-    }, [criticalAlerts])
+    // Transient alerts removed per user request to avoid UI overlap
+    // Critical Sophia alerts are already included in mergedAlerts shown in Header
 
     useEffect(() => {
         const checkScreen = () => {
@@ -103,12 +121,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }, [])
 
     const menuItems = useMemo(() => [
-        { name: t('common.dashboard'), icon: LayoutDashboard, href: '/dashboard', roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO'] },
-        { name: t('common.operations'), icon: Package, href: '/dashboard/operaciones', roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO'] },
-        { name: t('common.reports'), icon: BarChart3, href: '/dashboard/reportes', roles: ['ADMIN', 'SUPERVISOR'] },
-        { name: t('common.finances'), icon: History, href: '/dashboard/finanzas', roles: ['ADMIN'] },
-        { name: t('common.sophia'), icon: Sparkles, href: '/dashboard/sophia', roles: ['ADMIN', 'SUPERVISOR'] },
-        { name: t('common.settings'), icon: Settings, href: '/dashboard/configuracion', roles: ['ADMIN'] },
+        {
+            name: t('common.dashboard'),
+            description: t('sidebar.dashboardDesc'),
+            icon: LayoutDashboard,
+            href: '/dashboard',
+            roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO']
+        },
+        {
+            name: t('common.operations'),
+            description: t('sidebar.operationsDesc'),
+            icon: Package,
+            href: '/dashboard/operaciones',
+            roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO']
+        },
+        {
+            name: t('common.reports'),
+            description: t('sidebar.reportsDesc'),
+            icon: BarChart3,
+            href: '/dashboard/reportes',
+            roles: ['ADMIN', 'SUPERVISOR']
+        },
+        {
+            name: t('common.finances'),
+            description: t('sidebar.financesDesc'),
+            icon: History,
+            href: '/dashboard/finanzas',
+            roles: ['ADMIN']
+        },
+        {
+            name: t('common.sophia'),
+            description: t('sidebar.sophiaDesc'),
+            icon: Sparkles,
+            href: '/dashboard/sophia',
+            roles: ['ADMIN', 'SUPERVISOR']
+        },
+        {
+            name: t('common.settings'),
+            description: t('sidebar.settingsDesc'),
+            icon: Settings,
+            href: '/dashboard/configuracion',
+            roles: ['ADMIN']
+        },
     ], [t])
 
     const filteredMenu = useMemo(() =>
@@ -154,7 +208,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     toggleTheme={toggleTheme}
                     criticalAlerts={criticalAlerts}
                     hasAlerts={hasAlerts}
-                    alerts={alerts}
+                    alerts={mergedAlerts}
                     user={user}
                     logout={logout}
                 />

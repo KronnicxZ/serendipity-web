@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Serendipity Anthropos',
-        short_name: 'Anthropos',
+        name: 'Serendipity OS',
+        short_name: 'Serendipity OS',
         description: 'El corazón consciente de Serendipity Bros',
         start_url: '/',
         display: 'standalone',

@@ -14,27 +14,44 @@ import {
     Inbox,
     Activity,
     Zap,
-    RefreshCcw
+    RefreshCcw,
+    ShieldCheck,
+    Sun,
+    Calendar
 } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, EmptyState, StatCardSkeleton } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
+import { useState } from 'react'
+import { DateRange } from 'react-day-picker'
+import { DateRangePicker } from '@/components/date-range-picker'
 
 import { useDashboardData } from '@/hooks/use-dashboard-data'
-import { toast } from 'sonner'
+import { useNotifications } from '@/context/notification-context'
 import { useTranslation } from '@/context/language-context'
 import { PerformanceChart } from '@/components/dashboard/performance-chart'
 
 export default function DashboardPage() {
+    const [date, setDate] = useState<DateRange | undefined>()
+    const [activeRange, setActiveRange] = useState<number | null>(7) // Predeterminado a 7
     const { user } = useAuth()
     const { t, language } = useTranslation()
-    const { data: dashData, isLoading } = useDashboardData()
+    const { addNotification } = useNotifications()
+    const { data: dashData, isLoading } = useDashboardData(date)
 
     if (!user) return null
 
+    const setQuickRange = (days: number) => {
+        const to = new Date()
+        const from = new Date()
+        from.setDate(to.getDate() - days)
+        setDate({ from, to })
+    }
+
     const handleAction = () => {
-        toast.success(t('common.active'), {
-            description: t('sophia.reasoning'),
-            duration: 4000
+        addNotification({
+            type: 'INFO',
+            title: t('common.active'),
+            message: t('sophia.reasoning')
         })
     }
 
@@ -45,15 +62,16 @@ export default function DashboardPage() {
         { name: t('dashboard.prariaAmortization'), value: '$15,000', icon: ArrowUpRight, trend: '37%', color: 'bg-blue-500', bg: 'bg-blue-500/10', note: t('common.finances') },
     ]
 
-    const chartData = dashData?.metrics.slice(-7) || []
+    const chartData = dashData?.metrics || []
 
     return (
         <div className="space-y-14">
+            {/* ... (rest of the header and widgets remain same) ... */}
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                 <div className="space-y-3">
                     <Badge variant="success" className="mb-2">{t('common.systemConnected')}</Badge>
-                    <h1 className="text-[36px] sm:text-[40px] lg:text-[48px] font-bold tracking-tight text-[var(--foreground)] transition-colors duration-500 leading-[1.1] text-balance">
+                    <h1 className="text-3xl lg:text-[36px] font-semibold tracking-tight text-[var(--foreground)] transition-colors duration-500 leading-[1.1] text-balance">
                         {t('common.greeting')}, {user.name}
                     </h1>
                     <div className="flex items-start gap-3">
@@ -88,6 +106,92 @@ export default function DashboardPage() {
                         </div>
                     </Card>
                 </div>
+            </div>
+
+            {/* Widgets Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* WIDGET: Meta 150,000 SF */}
+                <Card className="p-6 lg:p-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)] flex flex-col gap-6 group hover:ring-blue-500/30 transition-all duration-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 border border-blue-500/20 shadow-inner">
+                            <Package size={26} strokeWidth={2} />
+                        </div>
+                        <div className="flex flex-col">
+                            <h3 className="text-xl font-semibold text-[var(--foreground)] tracking-tight">{t('common.operations')}</h3>
+                            <p className="text-sm font-medium text-[var(--muted-foreground)] mt-0.5">{t('dashboard.productionProgress')}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-end justify-between mt-2">
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold tracking-tight text-[var(--foreground)]">108.000</span>
+                            <span className="text-xl font-semibold text-[var(--muted-foreground)]">SF</span>
+                        </div>
+                        <span className="text-sm font-bold text-[var(--muted-foreground)] tracking-wide">{t('dashboard.sfGoalValue', { amount: '150.000' })}</span>
+                    </div>
+
+                    <div className="h-3 bg-blue-500/10 rounded-full overflow-hidden ring-1 ring-inset ring-blue-500/20">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: '72%' }}
+                            transition={{ duration: 1.5, ease: "easeOut" }}
+                            className="h-full bg-blue-500 rounded-full relative overflow-hidden"
+                        >
+                            <div className="absolute inset-y-0 left-0 right-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                        </motion.div>
+                    </div>
+
+                    <div className="bg-[var(--secondary)]/40 rounded-2xl p-4 flex items-center gap-3 border border-white/5 mt-2 overflow-hidden relative">
+                        <div className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-10 blur-[1px]">
+                            <Sun size={80} />
+                        </div>
+                        <Sun className="text-[var(--muted-foreground)] w-5 h-5 flex-shrink-0 relative z-10" />
+                        <p className="text-[13px] font-medium text-[var(--muted-foreground)] leading-relaxed pr-6 relative z-10">
+                            {t('dashboard.weatherStatus')}
+                        </p>
+                    </div>
+                </Card>
+
+                {/* WIDGET: Amortización Prara Asia ($40k) */}
+                <Card className="p-6 lg:p-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)] flex flex-col gap-6 group hover:ring-emerald-500/30 transition-all duration-500">
+                    <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-inner">
+                            <ShieldCheck size={26} strokeWidth={2} />
+                        </div>
+                        <div className="flex flex-col">
+                            <h3 className="text-xl font-semibold text-[var(--foreground)] tracking-tight">{t('common.finances')}</h3>
+                            <p className="text-sm font-medium text-[var(--muted-foreground)] mt-0.5">{t('finances.amortization')}</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-end justify-between mt-2">
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-4xl font-bold tracking-tight text-[var(--foreground)]">$15.000</span>
+                        </div>
+                        <span className="text-sm font-bold text-[var(--muted-foreground)] tracking-wide">{t('dashboard.debtGoalValue', { amount: '40.000' })}</span>
+                    </div>
+
+                    <div className="h-3 bg-emerald-500/10 rounded-full overflow-hidden ring-1 ring-inset ring-emerald-500/20">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: '37.5%' }}
+                            transition={{ duration: 1.5, ease: "easeOut", delay: 0.2 }}
+                            className="h-full bg-emerald-500 rounded-full relative overflow-hidden"
+                        >
+                            <div className="absolute inset-y-0 left-0 right-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] animate-[shimmer_2s_infinite]" />
+                        </motion.div>
+                    </div>
+
+                    <div className="bg-[var(--secondary)]/40 rounded-2xl p-4 flex items-center gap-3 border border-white/5 mt-2 overflow-hidden relative">
+                        <div className="absolute -right-6 top-1/2 -translate-y-1/2 opacity-10 blur-[1px]">
+                            <Activity size={80} />
+                        </div>
+                        <Activity className="text-[var(--muted-foreground)] w-5 h-5 flex-shrink-0 relative z-10" />
+                        <p className="text-[13px] font-medium text-[var(--muted-foreground)] leading-relaxed pr-6 relative z-10">
+                            {t('dashboard.flowStatus')}
+                        </p>
+                    </div>
+                </Card>
             </div>
 
             {/* Quick Metrics (Stats) */}
@@ -141,13 +245,44 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="secondary" size="sm" className="h-10 px-4 !rounded-xl">{t('common.sevenDays')}</Button>
-                                <Button variant="ghost" size="sm" className="h-10 px-4 !rounded-xl">{t('common.thirtyDays')}</Button>
+                                <Button
+                                    variant={activeRange === 7 ? "secondary" : "ghost"}
+                                    size="sm"
+                                    onClick={() => { setQuickRange(7); setActiveRange(7); }}
+                                    className={cn(
+                                        "h-10 px-4 !rounded-[14px] text-[13px] font-medium transition-all shadow-sm",
+                                        activeRange === 7 ? "border border-blue-500/20" : "text-[var(--muted-foreground)]"
+                                    )}
+                                >
+                                    {t('common.sevenDays')}
+                                </Button>
+                                <Button
+                                    variant={activeRange === 30 ? "secondary" : "ghost"}
+                                    size="sm"
+                                    onClick={() => { setQuickRange(30); setActiveRange(30); }}
+                                    className={cn(
+                                        "h-10 px-4 !rounded-[14px] text-[13px] font-medium transition-all shadow-sm",
+                                        activeRange === 30 ? "border border-blue-500/20" : "text-[var(--muted-foreground)]"
+                                    )}
+                                >
+                                    {t('common.thirtyDays')}
+                                </Button>
+                                <DateRangePicker
+                                    date={date}
+                                    onDateChange={(d) => { setDate(d); setActiveRange(null); }}
+                                    className="h-10 shadow-sm [&_button]:h-10"
+                                />
                             </div>
                         </div>
 
                         <div className="h-64 px-2">
-                            <PerformanceChart data={chartData} type="area" />
+                            {isLoading ? (
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Skeleton className="w-full h-full" />
+                                </div>
+                            ) : (
+                                <PerformanceChart data={chartData} type="area" />
+                            )}
                         </div>
                     </Card>
 
@@ -160,7 +295,7 @@ export default function DashboardPage() {
                                 title={t('dashboard.noNewMessages')}
                                 description={t('dashboard.noPendingMessages')}
                                 action={
-                                    <Button variant="secondary" onClick={() => toast.info(t('common.loading'))}>
+                                    <Button variant="secondary" onClick={() => addNotification({ type: 'INFO', title: t('dashboard.composeMessage'), message: t('common.loading') })}>
                                         {t('dashboard.composeMessage')}
                                     </Button>
                                 }
@@ -193,29 +328,9 @@ export default function DashboardPage() {
                                 </div>
                             ))}
                         </div>
-                        <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-widest bg-[var(--secondary)] hover:bg-[var(--border)] h-12 !rounded-xl" onClick={handleAction}>
+                        <Button variant="secondary" className="w-full text-[13px] font-medium bg-[var(--secondary)]/60 hover:bg-[var(--secondary)] border border-[var(--border)] h-12 !rounded-[14px] shadow-sm transition-all text-[var(--foreground)]" onClick={handleAction}>
                             {t('dashboard.auditHistory')}
                         </Button>
-                    </Card>
-
-                    <Card className="p-8 border-none bg-blue-500/5 ring-1 ring-blue-500/20 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">{t('dashboard.goal')}: 150.000 SF</span>
-                            <span className="text-xl font-bold tracking-tighter">72%</span>
-                        </div>
-                        <div className="h-3 bg-blue-500/10 rounded-full overflow-hidden">
-                            <motion.div initial={{ width: 0 }} animate={{ width: '72%' }} className="h-full bg-blue-500 shadow-lg shadow-blue-500/20" />
-                        </div>
-                        <div className="flex justify-between items-end pt-2">
-                            <div>
-                                <p className="text-2xl font-black text-[var(--foreground)] tracking-tighter">108.000</p>
-                                <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase">{t('dashboard.sfProcessed')}</p>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-lg font-bold text-[var(--foreground)] tracking-tight">42.000</p>
-                                <p className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase">{t('dashboard.remaining')}</p>
-                            </div>
-                        </div>
                     </Card>
                 </div>
             </div>

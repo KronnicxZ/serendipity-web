@@ -15,8 +15,9 @@ import {
 import { Button, Badge } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
 import { useTranslation } from '@/context/language-context'
+import { useNotifications } from '@/context/notification-context'
+import { useEffect, useState } from 'react'
 // #9 — Banderas importadas del componente compartido
 import { LANGUAGES } from '@/components/flags'
 
@@ -44,21 +45,21 @@ function UserAvatar({ name, role }: { name: string; role: string }) {
         .join('')
         .toUpperCase()
 
-    // Color determinista basado en el nombre
-    const colors = [
-        'from-blue-500 to-blue-700',
-        'from-violet-500 to-purple-700',
-        'from-rose-500 to-red-700',
-        'from-emerald-500 to-teal-700',
-        'from-amber-500 to-orange-700',
+    // Color determinista basado en el nombre (colores sólidos)
+    const solidColors = [
+        'bg-blue-600',
+        'bg-purple-600',
+        'bg-rose-600',
+        'bg-teal-600',
+        'bg-orange-600',
     ]
-    const colorIdx = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % colors.length
-    const gradient = colors[colorIdx]
+    const colorIdx = name.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) % solidColors.length
+    const bgColor = solidColors[colorIdx]
 
     return (
         <div className={cn(
-            'w-10 h-10 rounded-[14px] bg-gradient-to-br flex items-center justify-center shadow-lg border-2 border-transparent group-hover:border-[var(--climate-primary)] transition-all overflow-hidden',
-            gradient
+            'w-10 h-10 rounded-full flex items-center justify-center shadow-md border-2 border-transparent group-hover:border-[var(--climate-primary)] transition-all overflow-hidden',
+            bgColor
         )}>
             <span className="text-white text-xs font-black tracking-tight">{initials}</span>
         </div>
@@ -84,6 +85,16 @@ export function Header({
     const [isLangOpen, setIsLangOpen] = useState(false)
     const [isAlertsOpen, setIsAlertsOpen] = useState(false)
     const { language, setLanguage, t } = useTranslation()
+    const { lastAddedId } = useNotifications()
+    const [shouldAnimate, setShouldAnimate] = useState(false)
+
+    useEffect(() => {
+        if (lastAddedId) {
+            setShouldAnimate(true)
+            const timer = setTimeout(() => setShouldAnimate(false), 2000)
+            return () => clearTimeout(timer)
+        }
+    }, [lastAddedId])
 
     const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0]
 
@@ -212,7 +223,24 @@ export function Header({
                             criticalAlerts.length > 0 ? "text-red-500" : "text-[var(--muted-foreground)]"
                         )}
                     >
-                        <Bell size={18} className={cn(criticalAlerts.length > 0 && "animate-bounce")} />
+                        <motion.div
+                            animate={shouldAnimate ? {
+                                scale: [1, 1.2, 1],
+                                transition: { duration: 0.5, repeat: 3 }
+                            } : {}}
+                        >
+                            <Bell size={18} className={cn(criticalAlerts.length > 0 && "animate-bounce")} />
+                        </motion.div>
+
+                        {shouldAnimate && (
+                            <motion.span
+                                initial={{ opacity: 0, scale: 0.5 }}
+                                animate={{ opacity: [0, 0.5, 0], scale: [1, 2, 2.5] }}
+                                transition={{ duration: 1.5, repeat: 1 }}
+                                className="absolute inset-0 rounded-full bg-blue-500/30"
+                            />
+                        )}
+
                         {hasAlerts && (
                             <span className={cn(
                                 "absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white border-2 border-[var(--card)]",
@@ -249,7 +277,16 @@ export function Header({
                                             </div>
                                         ) : (
                                             alerts.map((alert: any, i: number) => (
-                                                <div key={i} className="flex items-start gap-3 px-3 py-3 rounded-[14px] hover:bg-[var(--secondary)] cursor-pointer">
+                                                <div
+                                                    key={i}
+                                                    onClick={() => {
+                                                        if (alert.actionUrl) {
+                                                            router.push(alert.actionUrl)
+                                                            setIsAlertsOpen(false)
+                                                        }
+                                                    }}
+                                                    className="flex items-start gap-3 px-3 py-3 rounded-[14px] hover:bg-[var(--secondary)] cursor-pointer"
+                                                >
                                                     <div className={cn(
                                                         "w-2 h-2 rounded-full mt-1.5 shrink-0",
                                                         alert.critical ? "bg-red-500" : "bg-blue-500"
@@ -299,8 +336,8 @@ export function Header({
                                 >
                                     {/* User info header in dropdown */}
                                     <div className="px-4 py-3 mb-1 flex items-center gap-3 border-b border-[var(--border)]">
-                                        <div className="w-9 h-9 shrink-0">
-                                            <div className="w-full h-full rounded-[10px] overflow-hidden">
+                                        <div className="w-10 h-10 shrink-0">
+                                            <div className="w-full h-full rounded-full overflow-hidden">
                                                 <UserAvatar name={user.name} role={user.role} />
                                             </div>
                                         </div>

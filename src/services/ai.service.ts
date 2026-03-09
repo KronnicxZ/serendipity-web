@@ -1,6 +1,6 @@
 import { ChatMessage, AgentType } from '@/types/sophia';
 import { FinanceSummary } from '@/types/finance';
-import { Order } from '@/types/operations';
+import { Order, Station } from '@/types/operations';
 import { VaultService } from './vault.service';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -11,11 +11,12 @@ export class AIService {
     static async generateResponse(
         query: string,
         finance?: FinanceSummary,
-        orders: Order[] = []
+        orders: Order[] = [],
+        stations: Station[] = []
     ): Promise<ChatMessage> {
 
         // 1. Prepare Context (Snapshot of Symmetry)
-        const context = this.prepareContext(finance, orders);
+        const context = this.prepareContext(finance, orders, stations);
         const vaultContext = VaultService.getVaultContext();
 
         // 2. Execute call
@@ -31,9 +32,20 @@ export class AIService {
         }
     }
 
-    private static prepareContext(finance?: FinanceSummary, orders: Order[] = []): string {
+    private static prepareContext(finance?: FinanceSummary, orders: Order[] = [], stations: Station[] = []): string {
         const totalOrders = orders.length;
         const urgentOrders = orders.filter(o => o.status === 'red').length;
+
+        let activeOrders = totalOrders;
+        let completedOrders = 0;
+
+        if (stations.length > 0) {
+            const sortedStations = [...stations].sort((a, b) => (b.order_index || 0) - (a.order_index || 0));
+            const lastStationId = sortedStations[0].id;
+            completedOrders = orders.filter(o => o.currentStationId === lastStationId).length;
+            activeOrders = totalOrders - completedOrders;
+        }
+
         const balance = finance?.totalBalance || 0;
         const climate = finance?.climate?.season || 'SIEMBRA';
         const margin = finance?.profitMargin || 0;
@@ -43,9 +55,10 @@ export class AIService {
             - Clima Financiero: ${climate}
             - Balance Real en Caja: $${balance.toLocaleString()}
             - Margen de Rentabilidad: ${margin}%
-            - Lotes Totales: ${totalOrders}
+            - Lotes Totales Históricos: ${totalOrders}
+            - Lotes Activos (En Procesamiento): ${activeOrders}
+            - Lotes Completados (Almacenados): ${completedOrders}
             - Lotes Críticos (Ritmo Bloqueado): ${urgentOrders}
-            - Estaciones Activas: Recepción, Dividido, Rebajado.
         `;
     }
 
@@ -102,11 +115,14 @@ export class AIService {
         if (q.includes('caja') || q.includes('dinero') || q.includes('financier')) {
             source = 'FINANCE';
             content = `${prefix}Analizando tu consulta con el contexto del **Agente de Tesorería**. Actualmente el clima es **${context.split('Clima Financiero: ')[1].split('\n')[0].trim()}**. Con un balance de **$${context.split('Balance Real en Caja: $')[1].split('\n')[0].trim()}**, la recomendación de Sophia es mantener la liquidez mientras resolvemos los cuellos de botella operativos.`;
-        } else if (q.includes('lote') || q.includes('orden') || q.includes('produccion')) {
+        } else if (q.includes('activos') || q.includes('completados') || q.includes('lote') || q.includes('orden') || q.includes('produccion')) {
             source = 'OPERATIONS';
-            content = `${prefix}El **Agente de Matriz** reporta **${context.split('Lotes Críticos (Ritmo Bloqueado): ')[1].split('\n')[0].trim()}** lotes con el ritmo bloqueado. Basándome en la correspondencia del sistema, debemos priorizar el flujo en la Estación de Dividido.`;
+            const activeStr = context.split('Lotes Activos (En Procesamiento): ')[1]?.split('\n')[0]?.trim() || "0";
+            const completedStr = context.split('Lotes Completados (Almacenados): ')[1]?.split('\n')[0]?.trim() || "0";
+            const reqAttnStr = context.split('Lotes Críticos (Ritmo Bloqueado): ')[1]?.split('\n')[0]?.trim() || "0";
+            content = `${prefix}El **Agente de Matriz** me acaba de informar en tiempo real: Hay **${activeStr} lotes activos** en procesamiento en la planta, y **${completedStr} lotes ya están completados** (Almacenados). Actualmente, ${reqAttnStr} lotes requieren atención por ritmo bloqueado.`;
         } else {
-            content = `${prefix}Entiendo tu inquietud bajo el principio de **Correspondencia**. El sistema está operando a un 82% de eficiencia. ¿Deseas que profundice en la relación entre el flujo de caja y la saturación de las estaciones?`;
+            content = `${prefix}Entiendo tu inquietud bajo el principio de **Correspondencia**. El sistema recopila datos en tiempo real de los Agentes. ¿Deseas que profundice en el flujo de caja o en el estado de los lotes activos vs completados?`;
         }
 
         return {
