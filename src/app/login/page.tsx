@@ -24,6 +24,9 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false)
     const [canUseBiometrics, setCanUseBiometrics] = useState(false)
     const [showEnrollmentModal, setShowEnrollmentModal] = useState(false)
+    const [isEnrolling, setIsEnrolling] = useState(false)
+    const [isBiometricAuthenticating, setIsBiometricAuthenticating] = useState(false)
+    const [isSkipping, setIsSkipping] = useState(false)
     const { isSupported, enroll, authenticate } = useBiometrics()
 
     useEffect(() => {
@@ -44,6 +47,7 @@ export default function LoginPage() {
 
     const handleBiometric = async () => {
         if (!isSupported) return;
+        setIsBiometricAuthenticating(true);
 
         try {
             addNotification({
@@ -65,6 +69,8 @@ export default function LoginPage() {
             }
         } catch (error: any) {
             console.error(error)
+        } finally {
+            setIsBiometricAuthenticating(false);
         }
     }
 
@@ -264,10 +270,11 @@ export default function LoginPage() {
                                     <Button
                                         type="button"
                                         onClick={handleBiometric}
-                                        disabled={loading}
+                                        disabled={loading || isBiometricAuthenticating}
+                                        isLoading={isBiometricAuthenticating}
                                         className="!w-14 !h-14 !rounded-[20px] bg-[var(--secondary)] text-blue-600 hover:bg-blue-600/10 border border-[var(--border)] shadow-sm flex items-center justify-center transition-all active:scale-[0.95]"
                                     >
-                                        <Fingerprint size={28} />
+                                        {!isBiometricAuthenticating && <Fingerprint size={28} />}
                                     </Button>
                                 )}
                             </div>
@@ -299,7 +306,11 @@ export default function LoginPage() {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                                onClick={() => router.push('/dashboard')}
+                                onClick={() => {
+                                    if (isEnrolling || isSkipping) return;
+                                    setIsSkipping(true);
+                                    router.push('/dashboard');
+                                }}
                             />
                             <motion.div
                                 initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -317,23 +328,39 @@ export default function LoginPage() {
                                 <div className="pt-4 flex flex-col gap-3">
                                     <Button
                                         onClick={async () => {
-                                            const success = await enroll();
-                                            if (success) {
-                                                const pending = localStorage.getItem('anthropos_biometric_auth_pending');
-                                                if (pending) {
-                                                    localStorage.setItem('anthropos_biometric_auth', pending);
-                                                    localStorage.removeItem('anthropos_biometric_auth_pending');
+                                            if (isEnrolling || isSkipping) return;
+                                            setIsEnrolling(true);
+                                            try {
+                                                const success = await enroll();
+                                                if (success) {
+                                                    const pending = localStorage.getItem('anthropos_biometric_auth_pending');
+                                                    if (pending) {
+                                                        localStorage.setItem('anthropos_biometric_auth', pending);
+                                                        localStorage.removeItem('anthropos_biometric_auth_pending');
+                                                    }
+                                                    router.push('/dashboard');
+                                                } else {
+                                                    setIsEnrolling(false);
                                                 }
-                                                router.push('/dashboard');
+                                            } catch (e) {
+                                                setIsEnrolling(false);
                                             }
                                         }}
+                                        isLoading={isEnrolling}
+                                        disabled={isEnrolling || isSkipping}
                                         className="w-full !h-14 !rounded-2xl bg-blue-600 text-white font-bold uppercase tracking-widest text-xs"
                                     >
                                         ACTIVAR AHORA
                                     </Button>
                                     <Button
                                         variant="ghost"
-                                        onClick={() => router.push('/dashboard')}
+                                        onClick={() => {
+                                            if (isEnrolling || isSkipping) return;
+                                            setIsSkipping(true);
+                                            router.push('/dashboard');
+                                        }}
+                                        isLoading={isSkipping}
+                                        disabled={isEnrolling || isSkipping}
                                         className="w-full !h-12 !rounded-2xl text-[var(--muted-foreground)] font-bold uppercase tracking-widest text-[10px]"
                                     >
                                         QUIZÁS MÁS TARDE
