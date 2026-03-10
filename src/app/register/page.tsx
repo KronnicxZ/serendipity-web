@@ -31,7 +31,7 @@ export default function RegisterPage() {
         e.preventDefault()
 
         // Validation for Admin setup
-        if (role === 'ADMIN' && adminCode !== 'MASTER2026') { // This would be an env variable normally
+        if (role === 'ADMIN' && adminCode !== process.env.NEXT_PUBLIC_ADMIN_MASTER_CODE) {
             addNotification({
                 type: 'ERROR',
                 title: t('auth.adminCodeErrorTitle') || 'Código Inválido',
@@ -132,13 +132,16 @@ export default function RegisterPage() {
             {/* Right Side (Form) */}
             <div className="flex-1 flex flex-col relative overflow-y-auto">
                 {/* Mobile Header (Hidden on Desktop) */}
-                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-start px-8 relative overflow-hidden">
+                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-between px-6 relative overflow-hidden shrink-0">
                     <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-blue-500 to-indigo-900" />
-                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos OS</h1>
+                    <h1 className="relative z-10 text-white font-bold tracking-widest text-xs uppercase truncate pr-4">Anthropos OS</h1>
+                    <div className="relative z-10 scale-90 origin-right">
+                        <AuthControls />
+                    </div>
                 </div>
 
-                {/* Floating Controls */}
-                <div className="absolute top-6 right-6 lg:top-10 lg:right-10 z-50">
+                {/* Floating Controls (Desktop only) */}
+                <div className="hidden lg:flex absolute top-10 right-10 z-50 items-center gap-4">
                     <AuthControls />
                 </div>
 

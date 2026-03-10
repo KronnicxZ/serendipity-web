@@ -7,11 +7,13 @@ import { cn } from '@/lib/utils'
 import { useTranslation } from '@/context/language-context'
 
 import { useSettings } from '@/hooks/use-settings'
+import { useUsers } from '@/hooks/use-users'
 import { toast } from 'sonner'
 
 export default function ConfiguracionPage() {
     const { t } = useTranslation()
     const { settings, updateSettings, updateNestedSetting } = useSettings()
+    const { users, loading: loadingUsers, updateUserRole } = useUsers()
     const [activeTab, setActiveTab] = useState('GLOBAL')
 
     const handleSave = () => {
@@ -25,6 +27,7 @@ export default function ConfiguracionPage() {
         { id: 'NOTIF', n: t('temple.notifications'), i: Bell },
         { id: 'SECURITY', n: t('temple.security'), i: Shield },
         { id: 'ROLES', n: t('temple.roles'), i: Lock },
+        { id: 'USERS', n: t('common.permissions'), i: UserCheck },
     ]
 
     return (
@@ -213,6 +216,57 @@ export default function ConfiguracionPage() {
                                             <Button variant="ghost" size="sm" className="font-bold border border-[var(--border)]">{t('common.permissions')}</Button>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
+                    {activeTab === 'USERS' && (
+                        <section className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <div className="space-y-8">
+                                <div className="flex items-center gap-3">
+                                    <UserCheck className="text-[var(--muted-foreground)]" size={20} />
+                                    <h3 className="font-bold text-xl tracking-tight text-[var(--foreground)]">{t('common.permissions')}</h3>
+                                </div>
+                                <div className="space-y-4">
+                                    {loadingUsers ? (
+                                        <div className="space-y-4">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="h-16 rounded-xl bg-[var(--secondary)]/20 animate-pulse" />
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        users.map(user => (
+                                            <div key={user.id} className="p-6 rounded-[20px] bg-[var(--secondary)]/30 border border-[var(--border)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                                <div className="space-y-1">
+                                                    <p className="font-bold text-[var(--foreground)]">{user.name}</p>
+                                                    <p className="text-xs text-[var(--muted-foreground)]">{user.email}</p>
+                                                    <Badge variant="default" className="mt-1 text-[10px] font-mono tracking-wider border-[var(--border)]">
+                                                        {user.role}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {(['ADMIN', 'SUPERVISOR', 'OPERATIVO'] as const).map(role => (
+                                                        <Button
+                                                            key={role}
+                                                            variant={user.role === role ? 'secondary' : 'ghost'}
+                                                            size="sm"
+                                                            className={cn(
+                                                                "text-[10px] h-8 px-3 rounded-lg font-bold border border-transparent transition-all",
+                                                                user.role === role && "border-blue-500/20 bg-blue-500/10 text-blue-500"
+                                                            )}
+                                                            onClick={async () => {
+                                                                const res = await updateUserRole(user.id, role);
+                                                                if (res.success) toast.success("Rol actualizado");
+                                                                else toast.error("Error al actualizar");
+                                                            }}
+                                                        >
+                                                            {role}
+                                                        </Button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </section>

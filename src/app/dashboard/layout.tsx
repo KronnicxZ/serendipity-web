@@ -168,8 +168,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const filteredMenu = useMemo(() =>
         menuItems.filter(item => user && item.roles.includes(user.role)),
         [menuItems, user])
+    const isAllowed = useMemo(() => {
+        const menuItem = menuItems.find(item => item.href === pathname);
+        if (!menuItem) return true; // Direct dashboard or non-sidebar pages might be open
+        return user && menuItem.roles.includes(user.role);
+    }, [menuItems, pathname, user]);
 
-    if (loading || !user) return <LoadingScreen />
+    useEffect(() => {
+        if (!loading && user && !isAllowed && pathname !== '/dashboard') {
+            router.push('/dashboard');
+        }
+    }, [isAllowed, loading, user, pathname, router]);
+
+    if (loading || !user || (!isAllowed && pathname !== '/dashboard')) return <LoadingScreen />
 
     return (
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] selection:bg-blue-200 transition-colors duration-300 overflow-x-hidden">
