@@ -4,13 +4,15 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth, UserRole } from '@/context/auth-context'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Lock, User, ChevronDown, ArrowRight, ChevronLeft, Mail, Eye, EyeOff } from 'lucide-react'
+import { Shield, Lock, User, ChevronDown, ArrowRight, ChevronLeft, Mail, Eye, EyeOff, Fingerprint } from 'lucide-react'
 import { Button, Card, Input } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
 import { useTranslation } from '@/context/language-context'
 import { AuthControls } from '@/components/auth-controls'
 import { useNotifications } from '@/context/notification-context'
+import { useBiometrics } from '@/hooks/use-biometrics'
+import { CheckCircle2 } from 'lucide-react'
 
 export default function LoginPage() {
     const { login, loading } = useAuth()
@@ -20,17 +22,71 @@ export default function LoginPage() {
     const [identity, setIdentity] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
+    const [canUseBiometrics, setCanUseBiometrics] = useState(false)
+    const [showEnrollmentModal, setShowEnrollmentModal] = useState(false)
+    const { isSupported, enroll, authenticate } = useBiometrics()
+
+    useEffect(() => {
+        // Check if user has logged in before on this device
+        const savedAuth = localStorage.getItem('anthropos_biometric_auth')
+        if (savedAuth) {
+            const { email } = JSON.parse(savedAuth)
+            if (email) {
+                setCanUseBiometrics(true)
+                setIdentity(email)
+            }
+        }
+    }, [])
+
+    const handleBiometric = async () => {
+        if (!isSupported) return;
+
+        try {
+            addNotification({
+                type: 'INFO',
+                title: t('auth.biometricTitle'),
+                message: t('auth.biometricMessage') || 'Esperando huella...'
+            })
+
+            const userData = await authenticate();
+
+            if (userData) {
+                // Successful biometric auth!
+                // Since we proved identity via browser, we can now use the saved password 
+                // to actually establish the Supabase session
+                const savedAuth = localStorage.getItem('anthropos_biometric_auth')
+                if (savedAuth) {
+                    const { email, pwd } = JSON.parse(savedAuth)
+                    await login(email, pwd)
+                    router.push('/dashboard')
+                    addNotification({
+                        type: 'SUCCESS',
+                        title: t('auth.biometricSuccessTitle'),
+                        message: t('auth.biometricSuccessMessage')
+                    })
+                }
+            }
+        } catch (error: any) {
+            console.error(error)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         try {
             await login(identity, password)
-            router.push('/dashboard')
-            addNotification({
-                type: 'SUCCESS',
-                title: t('auth.loginSuccessTitle'),
-                message: t('auth.loginSuccessMessage')
-            })
+
+            // Check if user has already enrolled biometrics
+            const savedAuth = localStorage.getItem('anthropos_biometric_auth')
+
+            if (!savedAuth && isSupported) {
+                // First time login and supports biometrics -> Show Enroll Prompt
+                setShowEnrollmentModal(true)
+                // Save for handleBiometric to use later
+                localStorage.setItem('anthropos_biometric_auth_pending', JSON.stringify({ email: identity, pwd: password }))
+            } else {
+                router.push('/dashboard')
+            }
         } catch (error: any) {
             console.error(error)
             addNotification({
@@ -112,9 +168,9 @@ export default function LoginPage() {
             {/* Right Side (Form) */}
             <div className="flex-1 flex flex-col relative overflow-y-auto">
                 {/* Mobile Header (Hidden on Desktop) */}
-                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-center relative overflow-hidden">
+                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-start px-8 relative overflow-hidden">
                     <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-blue-500 to-indigo-900" />
-                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos Core</h1>
+                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos OS</h1>
                 </div>
 
                 {/* Floating Controls */}
@@ -191,14 +247,30 @@ export default function LoginPage() {
                                 </div>
                             </div>
 
-                            <Button
-                                type="submit"
-                                className="w-full !h-14 text-base !rounded-[20px] bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 font-bold uppercase tracking-widest transition-all active:scale-[0.98]"
-                                isLoading={loading}
-                            >
-                                {t('auth.loginAction') || 'SIGN IN'}
-                                {!loading && <ArrowRight size={18} className="ml-2" />}
-                            </Button>
+                            <div className="flex gap-3">
+                                <Button
+                                    type="submit"
+                                    className={cn(
+                                        "flex-1 !h-14 text-base !rounded-[20px] bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 font-bold uppercase tracking-widest transition-all active:scale-[0.98]",
+                                        canUseBiometrics && "w-[calc(100%-68px)]"
+                                    )}
+                                    isLoading={loading}
+                                >
+                                    {t('auth.loginAction') || 'SIGN IN'}
+                                    {!loading && <ArrowRight size={18} className="ml-2" />}
+                                </Button>
+
+                                {canUseBiometrics && (
+                                    <Button
+                                        type="button"
+                                        onClick={handleBiometric}
+                                        disabled={loading}
+                                        className="!w-14 !h-14 !rounded-[20px] bg-[var(--secondary)] text-blue-600 hover:bg-blue-600/10 border border-[var(--border)] shadow-sm flex items-center justify-center transition-all active:scale-[0.95]"
+                                    >
+                                        <Fingerprint size={28} />
+                                    </Button>
+                                )}
+                            </div>
                         </form>
 
                         <footer className="pt-8 border-t border-[var(--border)] flex flex-col items-center gap-6">
@@ -217,6 +289,60 @@ export default function LoginPage() {
                         </footer>
                     </motion.div>
                 </div>
+
+                {/* Enrollment Modal */}
+                <AnimatePresence>
+                    {showEnrollmentModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                                onClick={() => router.push('/dashboard')}
+                            />
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                                animate={{ scale: 1, opacity: 1, y: 0 }}
+                                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                                className="relative bg-[var(--card)] border border-[var(--border)] rounded-[32px] p-8 max-w-[400px] w-full shadow-2xl space-y-6 text-center"
+                            >
+                                <div className="w-20 h-20 bg-blue-600/10 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-2">
+                                    <Fingerprint size={40} />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">¿Activar Acceso Biométrico?</h3>
+                                    <p className="text-[var(--muted-foreground)] text-sm">Usa tu huella dactilar para entrar más rápido la próxima vez. Es seguro y privado.</p>
+                                </div>
+                                <div className="pt-4 flex flex-col gap-3">
+                                    <Button
+                                        onClick={async () => {
+                                            const success = await enroll();
+                                            if (success) {
+                                                const pending = localStorage.getItem('anthropos_biometric_auth_pending');
+                                                if (pending) {
+                                                    localStorage.setItem('anthropos_biometric_auth', pending);
+                                                    localStorage.removeItem('anthropos_biometric_auth_pending');
+                                                }
+                                                router.push('/dashboard');
+                                            }
+                                        }}
+                                        className="w-full !h-14 !rounded-2xl bg-blue-600 text-white font-bold uppercase tracking-widest text-xs"
+                                    >
+                                        ACTIVAR AHORA
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        onClick={() => router.push('/dashboard')}
+                                        className="w-full !h-12 !rounded-2xl text-[var(--muted-foreground)] font-bold uppercase tracking-widest text-[10px]"
+                                    >
+                                        QUIZÁS MÁS TARDE
+                                    </Button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
             </div>
         </div>
     )

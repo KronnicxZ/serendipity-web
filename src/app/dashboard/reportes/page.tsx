@@ -59,13 +59,14 @@ export default function ReportesPage() {
                     <DateRangePicker
                         date={date}
                         onDateChange={setDate}
-                        className="h-11 shadow-sm [&_button]:h-11"
+                        align="left"
+                        className="h-10 shadow-sm [&_button]:h-10"
                     />
                     <Button
                         variant="secondary"
                         onClick={handleExport}
                         disabled={isExporting}
-                        className="rounded-[16px] font-medium text-[13px] px-5 h-11 shadow-sm transition-all flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] hover:bg-[var(--foreground)]/90"
+                        className="rounded-[16px] font-medium text-[13px] px-5 h-10 shadow-sm transition-all flex items-center gap-2 bg-[var(--foreground)] text-[var(--background)] hover:bg-[var(--foreground)]/90"
                     >
                         <Download size={16} /> {isExporting ? 'Exportando...' : t('reports.export')}
                     </Button>

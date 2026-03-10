@@ -105,6 +105,17 @@ export const en = {
         updatePassword: "Update Password",
         passwordUpdatedTitle: "Password Updated!",
         passwordUpdatedMessage: "Your identity has been secured. You can now enter the system with your new access key.",
+        biometricLogin: "Biometric Login",
+        biometricTitle: "Biometric Access",
+        biometricMessage: "Scan your fingerprint to access the system.",
+        biometricErrorTitle: "Biometric Failure",
+        biometricErrorMessage: "Identity could not be verified. Please use your password.",
+        biometricSuccessTitle: "Identity Verified",
+        biometricSuccessMessage: "Login successful.",
+        adminCodeLabel: "Admin Master Code",
+        adminCodePlaceholder: "Enter authorization code",
+        adminCodeErrorTitle: "Invalid Code",
+        adminCodeErrorMessage: "The admin authorization code is incorrect."
     },
     dashboard: {
         activeOperation: "Active Operation",

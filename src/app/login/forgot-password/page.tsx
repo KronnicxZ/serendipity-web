@@ -76,9 +76,9 @@ export default function ForgotPasswordPage() {
 
             {/* Right Side (Form) */}
             <div className="flex-1 flex flex-col relative overflow-y-auto">
-                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-center relative overflow-hidden">
+                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-start px-8 relative overflow-hidden">
                     <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-blue-500 to-indigo-900" />
-                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos Core</h1>
+                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos OS</h1>
                 </div>
 
                 <div className="absolute top-6 right-6 lg:top-10 lg:right-10 z-50">

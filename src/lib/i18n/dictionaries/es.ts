@@ -105,6 +105,17 @@ export const es = {
         updatePassword: "Actualizar Clave",
         passwordUpdatedTitle: "¡Clave Actualizada!",
         passwordUpdatedMessage: "Tu identidad ha sido asegurada. Ahora ya puedes entrar al sistema con tu nueva clave de acceso.",
+        biometricLogin: "Inicio Biométrico",
+        biometricTitle: "Acceso Biométrico",
+        biometricMessage: "Escanea tu huella para acceder al sistema.",
+        biometricErrorTitle: "Falla Biométrica",
+        biometricErrorMessage: "No se pudo verificar tu identidad. Por favor usa tu clave.",
+        biometricSuccessTitle: "Identidad Verificada",
+        biometricSuccessMessage: "Inicio de sesión exitoso.",
+        adminCodeLabel: "Código Maestro Admin",
+        adminCodePlaceholder: "Ingrese código de autorización",
+        adminCodeErrorTitle: "Código Inválido",
+        adminCodeErrorMessage: "El código de autorización de administrador es incorrecto."
     },
     dashboard: {
         activeOperation: "Operación Activa",

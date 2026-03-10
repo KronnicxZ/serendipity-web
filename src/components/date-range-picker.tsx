@@ -16,6 +16,7 @@ interface DateRangePickerProps {
     date: DateRange | undefined
     onDateChange: (date: DateRange | undefined) => void
     className?: string
+    align?: 'left' | 'right'
 }
 
 const localeMap = {
@@ -24,21 +25,31 @@ const localeMap = {
     vn: vi
 }
 
-export function DateRangePicker({ date, onDateChange, className }: DateRangePickerProps) {
+export function DateRangePicker({ date, onDateChange, className, align = 'right' }: DateRangePickerProps) {
     const { t, language } = useTranslation()
     const [isOpen, setIsOpen] = useState(false)
+    const [isMobile, setIsMobile] = useState(false)
     const ref = useRef<HTMLDivElement>(null)
 
     const currentLocale = localeMap[language] || es
 
     useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024)
+        }
+        checkMobile()
+        window.addEventListener('resize', checkMobile)
+
         const handleClickOutside = (event: MouseEvent) => {
             if (ref.current && !ref.current.contains(event.target as Node)) {
                 setIsOpen(false)
             }
         }
         document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
+        return () => {
+            window.removeEventListener('resize', checkMobile)
+            document.removeEventListener('mousedown', handleClickOutside)
+        }
     }, [])
 
     return (
@@ -74,7 +85,10 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute z-50 mt-2 right-0 p-4 bg-[var(--card)] border border-[var(--border)] shadow-2xl rounded-[24px]"
+                        className={cn(
+                            "absolute z-50 mt-2 p-4 bg-[var(--card)] border border-[var(--border)] shadow-2xl rounded-[24px] min-w-max",
+                            align === 'right' ? "right-0" : "left-0"
+                        )}
                     >
                         <div className="flex justify-between items-center mb-4 pb-2 border-b border-[var(--border)]">
                             <h4 className="font-semibold text-sm">{t('common.selectRange')}</h4>
@@ -87,7 +101,7 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
                             selected={date}
                             onSelect={onDateChange}
                             locale={currentLocale}
-                            numberOfMonths={2}
+                            numberOfMonths={isMobile ? 1 : 2}
                             classNames={{
                                 selected: "opacity-100",
                                 range_start: "!bg-blue-600 !text-white !rounded-l-full",
@@ -126,3 +140,4 @@ export function DateRangePicker({ date, onDateChange, className }: DateRangePick
         </div>
     )
 }
+

@@ -17,6 +17,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [name, setName] = useState('')
+    const [adminCode, setAdminCode] = useState('')
     const [role, setRole] = useState<UserRole>('OPERATIVO')
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
@@ -28,6 +29,17 @@ export default function RegisterPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+
+        // Validation for Admin setup
+        if (role === 'ADMIN' && adminCode !== 'MASTER2026') { // This would be an env variable normally
+            addNotification({
+                type: 'ERROR',
+                title: t('auth.adminCodeErrorTitle') || 'Código Inválido',
+                message: t('auth.adminCodeErrorMessage') || 'El código de autorización de administrador es incorrecto.'
+            })
+            return
+        }
+
         setIsLoading(true)
         try {
             await register(email, password, name, role)
@@ -120,9 +132,9 @@ export default function RegisterPage() {
             {/* Right Side (Form) */}
             <div className="flex-1 flex flex-col relative overflow-y-auto">
                 {/* Mobile Header (Hidden on Desktop) */}
-                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-center relative overflow-hidden">
+                <div className="lg:hidden h-24 bg-blue-600 flex items-center justify-start px-8 relative overflow-hidden">
                     <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-blue-500 to-indigo-900" />
-                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos Core</h1>
+                    <h1 className="relative z-10 text-white font-bold tracking-widest text-sm uppercase">Anthropos OS</h1>
                 </div>
 
                 {/* Floating Controls */}
@@ -220,7 +232,7 @@ export default function RegisterPage() {
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="text-blue-600"><Shield size={18} /></div>
-                                        <span className="font-bold">
+                                        <span className="font-bold uppercase tracking-tight">
                                             {role === 'ADMIN' ? t('auth.admin') : role === 'SUPERVISOR' ? t('auth.supervisor') : t('auth.plant')}
                                         </span>
                                     </div>
@@ -238,6 +250,7 @@ export default function RegisterPage() {
                                                 className="absolute bottom-full mb-3 left-0 right-0 bg-[var(--card)] border border-[var(--border)] rounded-[24px] shadow-2xl z-20 overflow-hidden p-2"
                                             >
                                                 {[
+                                                    { value: 'ADMIN', label: t('auth.admin'), desc: 'Acceso total al sistema y gestión de usuarios' },
                                                     { value: 'SUPERVISOR', label: t('auth.supervisor'), desc: t('auth.supervisorDesc') },
                                                     { value: 'OPERATIVO', label: t('auth.plant'), desc: t('auth.plantDesc') }
                                                 ].map((option) => (
@@ -254,7 +267,7 @@ export default function RegisterPage() {
                                                         )}
                                                     >
                                                         <div>
-                                                            <p className={cn("font-bold text-base", role === option.value ? "text-white" : "text-[var(--foreground)]")}>{option.label}</p>
+                                                            <p className={cn("font-bold text-base uppercase", role === option.value ? "text-white" : "text-[var(--foreground)]")}>{option.label}</p>
                                                             <p className={cn("text-[10px] uppercase font-bold tracking-wider mt-0.5", role === option.value ? "text-white/70" : "text-[var(--muted-foreground)]")}>{option.desc}</p>
                                                         </div>
                                                         {role === option.value && <div className="w-2 h-2 rounded-full bg-white shadow-sm" />}
@@ -265,6 +278,24 @@ export default function RegisterPage() {
                                     )}
                                 </AnimatePresence>
                             </div>
+
+                            {role === 'ADMIN' && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    className="space-y-2 overflow-hidden"
+                                >
+                                    <label className="text-[13px] font-bold text-blue-600 ml-1 uppercase tracking-wider">{t('auth.adminCodeLabel')}</label>
+                                    <Input
+                                        type="password"
+                                        required
+                                        value={adminCode}
+                                        onChange={(e) => setAdminCode(e.target.value)}
+                                        placeholder={t('auth.adminCodePlaceholder')}
+                                        className="!h-14 !rounded-2xl !bg-blue-500/5 border-blue-600/20 focus:!bg-[var(--card)] focus:ring-2 focus:ring-blue-600/20 text-base"
+                                    />
+                                </motion.div>
+                            )}
 
                             <Button
                                 type="submit"
