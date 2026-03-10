@@ -17,8 +17,18 @@ export function useBiometrics() {
 
     const enroll = async () => {
         try {
+            const { createClient } = await import('@/lib/supabase/client');
+            const supabase = createClient();
+            if (!supabase) throw new Error('Supabase client missing');
+
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('No active session to enroll biometric');
+
             // 1. Get options from server
-            const resp = await fetch('/api/auth/webauthn?action=registration-options');
+            const resp = await fetch('/api/auth/webauthn/generate-registration-options', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${session.access_token}` },
+            });
             const options = await resp.json();
 
             if (options.error) throw new Error(options.error);
@@ -27,10 +37,13 @@ export function useBiometrics() {
             const attestation = await startRegistration(options);
 
             // 3. Verify with server
-            const verifyResp = await fetch('/api/auth/webauthn', {
+            const verifyResp = await fetch('/api/auth/webauthn/verify-registration-response', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'verify-registration', body: attestation }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify(attestation),
             });
 
             const result = await verifyResp.json();
@@ -38,8 +51,8 @@ export function useBiometrics() {
             if (result.verified) {
                 addNotification({
                     type: 'SUCCESS',
-                    title: t('auth.biometricSuccessTitle') || 'Enrolamiento Exitoso',
-                    message: t('auth.biometricSuccessMessage') || 'Ahora puedes usar tu huella para entrar.'
+                    title: t('auth.biometricSuccessTitle') || 'Registro Exitoso',
+                    message: t('auth.biometricSuccessMessage') || 'Huella registrada.'
                 });
                 return true;
             } else {
@@ -49,8 +62,8 @@ export function useBiometrics() {
             console.error(error);
             addNotification({
                 type: 'ERROR',
-                title: t('auth.biometricErrorTitle'),
-                message: error.message || t('auth.biometricErrorMessage')
+                title: t('auth.biometricErrorTitle') || 'Error Biométrico',
+                message: error.message || t('auth.biometricErrorMessage') || 'Error al registrar huella'
             });
             return false;
         }
@@ -59,7 +72,9 @@ export function useBiometrics() {
     const authenticate = async () => {
         try {
             // 1. Get options from server
-            const resp = await fetch('/api/auth/webauthn?action=authentication-options');
+            const resp = await fetch('/api/auth/webauthn/generate-authentication-options', {
+                method: 'POST'
+            });
             const options = await resp.json();
 
             if (options.error) throw new Error(options.error);
@@ -68,25 +83,25 @@ export function useBiometrics() {
             const assertion = await startAuthentication(options);
 
             // 3. Verify with server
-            const verifyResp = await fetch('/api/auth/webauthn', {
+            const verifyResp = await fetch('/api/auth/webauthn/verify-authentication-response', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'verify-authentication', body: assertion }),
+                body: JSON.stringify(assertion),
             });
 
             const result = await verifyResp.json();
 
             if (result.verified) {
-                return result.user; // Return user to log in
+                return result.sessionRequest;
             } else {
-                throw new Error('Verification failed');
+                throw new Error(result.error || 'Verification failed');
             }
         } catch (error: any) {
             console.error(error);
             addNotification({
                 type: 'ERROR',
-                title: t('auth.biometricErrorTitle'),
-                message: error.message || t('auth.biometricErrorMessage')
+                title: t('auth.biometricErrorTitle') || 'Error Biométrico',
+                message: error.message || t('auth.biometricErrorMessage') || 'Error al autenticar con huella'
             });
             return null;
         }

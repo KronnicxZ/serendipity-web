@@ -15,7 +15,7 @@ import { useBiometrics } from '@/hooks/use-biometrics'
 import { CheckCircle2 } from 'lucide-react'
 
 export default function LoginPage() {
-    const { login, loading } = useAuth()
+    const { login, loginWithOtp, loading } = useAuth()
     const { t, language } = useTranslation()
     const { addNotification } = useNotifications()
     const router = useRouter()
@@ -30,10 +30,14 @@ export default function LoginPage() {
         // Check if user has logged in before on this device
         const savedAuth = localStorage.getItem('anthropos_biometric_auth')
         if (savedAuth) {
-            const { email } = JSON.parse(savedAuth)
-            if (email) {
-                setCanUseBiometrics(true)
-                setIdentity(email)
+            try {
+                const { email } = JSON.parse(savedAuth)
+                if (email) {
+                    setCanUseBiometrics(true)
+                    setIdentity(email)
+                }
+            } catch (e) {
+                // Ignore parse errors
             }
         }
     }, [])
@@ -48,23 +52,16 @@ export default function LoginPage() {
                 message: t('auth.biometricMessage') || 'Esperando huella...'
             })
 
-            const userData = await authenticate();
+            const sessionRequest = await authenticate();
 
-            if (userData) {
-                // Successful biometric auth!
-                // Since we proved identity via browser, we can now use the saved password 
-                // to actually establish the Supabase session
-                const savedAuth = localStorage.getItem('anthropos_biometric_auth')
-                if (savedAuth) {
-                    const { email, pwd } = JSON.parse(savedAuth)
-                    await login(email, pwd)
-                    router.push('/dashboard')
-                    addNotification({
-                        type: 'SUCCESS',
-                        title: t('auth.biometricSuccessTitle'),
-                        message: t('auth.biometricSuccessMessage')
-                    })
-                }
+            if (sessionRequest) {
+                await loginWithOtp(sessionRequest.email, sessionRequest.otp)
+                router.push('/dashboard')
+                addNotification({
+                    type: 'SUCCESS',
+                    title: t('auth.biometricSuccessTitle'),
+                    message: t('auth.biometricSuccessMessage')
+                })
             }
         } catch (error: any) {
             console.error(error)
@@ -83,7 +80,7 @@ export default function LoginPage() {
                 // First time login and supports biometrics -> Show Enroll Prompt
                 setShowEnrollmentModal(true)
                 // Save for handleBiometric to use later
-                localStorage.setItem('anthropos_biometric_auth_pending', JSON.stringify({ email: identity, pwd: password }))
+                localStorage.setItem('anthropos_biometric_auth_pending', JSON.stringify({ email: identity }))
             } else {
                 router.push('/dashboard')
             }

@@ -9,6 +9,7 @@ import { useTranslation } from '@/context/language-context'
 import { useSettings } from '@/hooks/use-settings'
 import { useUsers } from '@/hooks/use-users'
 import { toast } from 'sonner'
+import { BiometricSettings } from '@/components/settings/biometric-settings'
 
 export default function ConfiguracionPage() {
     const { t } = useTranslation()
@@ -187,6 +188,9 @@ export default function ConfiguracionPage() {
                                         <p className="text-xs text-[var(--muted-foreground)]">{t('temple.sessionTimeDesc')}</p>
                                         <span className="text-sm font-bold">45 {t('common.minutes')}</span>
                                     </Card>
+                                </div>
+                                <div className="pt-4 border-t border-[var(--border)]">
+                                    <BiometricSettings />
                                 </div>
                             </div>
                         </section>

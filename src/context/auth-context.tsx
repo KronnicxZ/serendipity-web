@@ -17,6 +17,7 @@ interface AuthContextType {
     user: User | null
     session: Session | null
     login: (email: string, password: string) => Promise<void>
+    loginWithOtp: (email: string, otp: string) => Promise<void>
     register: (email: string, password: string, name: string, role: UserRole) => Promise<void>
     logout: () => Promise<void>
     loading: boolean
@@ -83,6 +84,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error
     }
 
+    const loginWithOtp = async (email: string, otp: string) => {
+        if (!supabase) throw new Error('Supabase Client not initialized')
+
+        const { error } = await supabase.auth.verifyOtp({
+            email,
+            token: otp,
+            type: 'magiclink'
+        })
+
+        if (error) throw error
+    }
+
     const register = async (email: string, password: string, name: string, role: UserRole) => {
         if (!supabase) throw new Error('Supabase Client not initialized')
 
@@ -106,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, login, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, session, login, loginWithOtp, register, logout, loading }}>
             {children}
         </AuthContext.Provider>
     )
