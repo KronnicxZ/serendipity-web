@@ -12,7 +12,7 @@
 - [x] **Sistema de Autenticación Premium:** Diseño tipo *split-layout* con soporte para Password y OTP.
 - [x] **Acceso Biométrico:** Flujo completo de Huella/FaceID (Resuelto bug de loop en móviles).
 - [x] **Enrolamiento Biométrico:** Modal para que nuevos usuarios asocien sus dispositivos.
-- [x] **Registro Seguro:** Modo Administrador oculto (activable solo vía `?admin=true`).
+- [x] **Registro Seguro:** Modo Administrador oculto (vía `/nexus` o `?admin=true`).
 - [x] **Dashboard Core:** Layout principal, sidebar interactivo y Header.
 - [x] **Micro-interacciones de Estado:** Ojo de Sophia, Clima, Salud Algorítmica y Notificaciones.
 - [x] **Módulo de Operaciones:** Tracker de estaciones, Lector/Impresor de QR y métricas de lotes.

@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   title: "Serendipity OS",
   description: "El corazón consciente de Serendipity Bros",
   manifest: '/manifest.json',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',

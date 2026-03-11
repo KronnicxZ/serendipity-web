@@ -12,10 +12,10 @@ import { useTranslation } from '@/context/language-context'
 import { AuthControls } from '@/components/auth-controls'
 import { useNotifications } from '@/context/notification-context'
 
-function RegisterForm() {
+function RegisterForm({ forcedAdmin }: { forcedAdmin?: boolean }) {
     const { t } = useTranslation()
     const searchParams = useSearchParams()
-    const isAdminMode = searchParams.get('admin') === 'true'
+    const isAdminMode = forcedAdmin || searchParams.get('admin') === 'true'
     
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -217,7 +217,7 @@ function RegisterForm() {
     )
 }
 
-export default function RegisterPage() {
+export default function RegisterPage({ forcedAdmin }: { forcedAdmin?: boolean }) {
     const { t } = useTranslation()
 
     return (
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                         </header>
 
                         <Suspense fallback={<div className="h-64 flex items-center justify-center text-blue-600"><RefreshCcw className="animate-spin" /></div>}>
-                            <RegisterForm />
+                            <RegisterForm forcedAdmin={forcedAdmin} />
                         </Suspense>
 
                         <footer className="pt-8 border-t border-[var(--border)] flex flex-col items-center gap-6">

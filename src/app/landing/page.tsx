@@ -6,7 +6,8 @@ import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion'
 import {
     Shield, Zap, BarChart3, Brain, ArrowRight,
     Activity, Users, Layers, Globe,
-    Sparkles, CheckCircle2, Target, LineChart
+    Sparkles, CheckCircle2, Target, LineChart,
+    FileText, Archive, Database, Fingerprint, Wifi
 } from 'lucide-react'
 import { Button } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
@@ -43,13 +44,13 @@ const COPY = {
         aiBadge: 'Inteligencia Artificial',
         aiH2a: 'Sophia,',
         aiH2b: 'tu agente operativo',
-        aiDesc: 'No es un chatbot. Sophia es un agente inteligente que analiza datos operativos, detecta anomalías, propone optimizaciones y aprende de los patrones de tu organización.',
-        aiFeats: ['Análisis de rentabilidad en tiempo real', 'Insights financieros automatizados', 'Alertas predictivas de riesgo', 'Recomendaciones operativas contextuales'],
-        aiBtn: 'Activar Sophia',
+        aiDesc: 'Sophia es tu orquestadora central. Se comunica con sus micro-agentes para monitorear finanzas, operaciones y el Sagrario, entregándote reportes estratégicos en tiempo real.',
+        aiFeats: ['Análisis del Sagrario (Memoria Histórica)', 'Orquestación de Micro-Agentes especializados', 'Generación de Reportes Ejecutivos en PDF', 'Recomendaciones basadas en principios herméticos'],
+        aiBtn: 'Consultar a Sophia',
         accessBadge: 'Acceso y seguridad',
         accessH2a: 'Capas de acceso.',
         accessH2b: 'Control total.',
-        accessDesc: 'Un sistema de roles pensado para organizaciones complejas donde cada persona accede solo a lo que le corresponde.',
+        accessDesc: 'Un sistema de roles pensado para organizaciones complejas con seguridad biométrica WebAuthn integrada.',
         roles: [
             { role: 'ADMIN', desc: 'Visibilidad total del sistema, configuración global y gestión de usuarios.' },
             { role: 'SUPERVISOR', desc: 'Monitoreo de equipos, aprobaciones y seguimiento operativo.' },
@@ -62,12 +63,12 @@ const COPY = {
         footerAccess: 'Acceder',
         footerReg: 'Registro',
         modules: [
-            { title: 'Finanzas Inteligentes', desc: 'Control total de operaciones, costos y rentabilidad con métricas en tiempo real.' },
-            { title: 'Sophia — IA Operativa', desc: 'Motor de inteligencia artificial integrado que analiza, recomienda y actúa.' },
-            { title: 'Clima Financiero', desc: 'Sistema dinámico que adapta la UI según el estado económico: Siembra, Cosecha o Tormenta.' },
-            { title: 'Gestión de Roles', desc: 'Acceso por capas: Admin, Supervisor y Operativo con permisos diferenciados.' },
-            { title: 'Operaciones & Lotes', desc: 'Trazabilidad completa de procesos productivos, insumos y rendimiento de lotes.' },
-            { title: 'Matriz de Ritmos', desc: 'Visualiza y gestiona prioridades operativas con un sistema kanban de ritmos.' },
+            { title: 'Finanzas Inteligentes', desc: 'Control total de ingresos, gastos y liquidez con cálculos proyectados y estados de deuda.' },
+            { title: 'Sophia — Macro-Agente', desc: 'Orquestación de micro-agentes que monitorean finanzas, operaciones y memoria histórica.' },
+            { title: 'Sagrario Digital', desc: 'Tu base de conocimientos con búsqueda semántica y recuperación de documentos (RAG).' },
+            { title: 'Biometría Avanzada', desc: 'Acceso seguro y rápido mediante huella dactilar o FaceID con tecnología WebAuthn.' },
+            { title: 'Sincronización Offline', desc: 'Opera sin internet; tus cambios se guardan localmente y se sincronizan al volver la red.' },
+            { title: 'Insumos & Trazabilidad', desc: 'Seguimiento exacto de lotes de producción, consumos y eficiencias por estación.' },
         ],
     },
     en: {
@@ -96,13 +97,13 @@ const COPY = {
         aiBadge: 'Artificial Intelligence',
         aiH2a: 'Sophia,',
         aiH2b: 'your operational agent',
-        aiDesc: 'Not a chatbot. Sophia is an intelligent agent that analyzes operational data, detects anomalies, proposes optimizations and learns from your organization\'s patterns.',
-        aiFeats: ['Real-time profitability analysis', 'Automated financial insights', 'Predictive risk alerts', 'Contextual operational recommendations'],
-        aiBtn: 'Activate Sophia',
+        aiDesc: 'Sophia is your central orchestrator. She communicates with her micro-agents to monitor finances, operations, and the Vault, delivering real-time strategic reports.',
+        aiFeats: ['Vault Analysis (Historical Memory)', 'Orchestration of specialized Micro-Agents', 'Executive PDF Report Generation', 'Hermetic principle-based recommendations'],
+        aiBtn: 'Consult Sophia',
         accessBadge: 'Access & security',
         accessH2a: 'Access layers.',
         accessH2b: 'Total control.',
-        accessDesc: 'A role system designed for complex organizations where each person only accesses what they need.',
+        accessDesc: 'A role system designed for complex organizations with integrated WebAuthn biometric security.',
         roles: [
             { role: 'ADMIN', desc: 'Full system visibility, global configuration and user management.' },
             { role: 'SUPERVISOR', desc: 'Team monitoring, approvals and operational follow-up.' },
@@ -115,12 +116,12 @@ const COPY = {
         footerAccess: 'Access',
         footerReg: 'Register',
         modules: [
-            { title: 'Smart Finance', desc: 'Full control of operations, costs and profitability with real-time metrics.' },
-            { title: 'Sophia — Operational AI', desc: 'Integrated artificial intelligence engine that analyzes, recommends and acts.' },
-            { title: 'Financial Climate', desc: 'Dynamic system that adapts the UI based on economic state: Siembra, Cosecha or Tormenta.' },
-            { title: 'Role Management', desc: 'Layered access: Admin, Supervisor and Operative with differentiated permissions.' },
-            { title: 'Operations & Batches', desc: 'Full traceability of productive processes, inputs and batch performance.' },
-            { title: 'Rhythm Matrix', desc: 'Visualize and manage operational priorities with a rhythm-based kanban system.' },
+            { title: 'Smart Finance', desc: 'Total control of income, expenses, and liquidity with projected calculations and debt status.' },
+            { title: 'Sophia — Macro-Agent', desc: 'Orchestration of micro-agents that monitor finances, operations, and historical memory.' },
+            { title: 'Digital Vault (Sagrario)', desc: 'Your knowledge base with semantic search and document retrieval (RAG).' },
+            { title: 'Advanced Biometrics', desc: 'Secure and fast access via fingerprint or FaceID with WebAuthn technology.' },
+            { title: 'Offline Synchronization', desc: 'Operate without internet; your changes are saved locally and synced when back online.' },
+            { title: 'Inputs & Traceability', desc: 'Exact tracking of production batches, consumption, and efficiency per station.' },
         ],
     },
     vn: {
@@ -149,13 +150,13 @@ const COPY = {
         aiBadge: 'Trí tuệ nhân tạo',
         aiH2a: 'Sophia,',
         aiH2b: 'đại lý vận hành của bạn',
-        aiDesc: 'Không phải chatbot. Sophia là đại lý thông minh phân tích dữ liệu vận hành, phát hiện bất thường, đề xuất tối ưu hóa và học từ các mẫu của tổ chức bạn.',
-        aiFeats: ['Phân tích lợi nhuận thời gian thực', 'Thông tin tài chính tự động', 'Cảnh báo rủi ro dự đoán', 'Đề xuất vận hành theo ngữ cảnh'],
-        aiBtn: 'Kích hoạt Sophia',
+        aiDesc: 'Sophia là người điều phối trung tâm của bạn. Cô ấy liên lạc với các đại lý vi mô để giám sát tài chính, vận hành và Kho lưu trữ.',
+        aiFeats: ['Phân tích kho lưu trữ (Bộ nhớ lịch sử)', 'Điều phối các đại lý vi mô chuyên dụng', 'Tạo báo cáo PDF điều hành', 'Khuyến nghị dựa trên nguyên lý Hermetic'],
+        aiBtn: 'Tham vấn Sophia',
         accessBadge: 'Truy cập & bảo mật',
         accessH2a: 'Các lớp truy cập.',
         accessH2b: 'Kiểm soát hoàn toàn.',
-        accessDesc: 'Hệ thống vai trò được thiết kế cho các tổ chức phức tạp nơi mỗi người chỉ truy cập những gì họ cần.',
+        accessDesc: 'Hệ thống vai trò cho các tổ chức phức tạp với bảo mật sinh trắc học WebAuthn.',
         roles: [
             { role: 'ADMIN', desc: 'Toàn quyền xem hệ thống, cấu hình toàn cầu và quản lý người dùng.' },
             { role: 'SUPERVISOR', desc: 'Giám sát nhóm, phê duyệt và theo dõi vận hành.' },
@@ -168,12 +169,12 @@ const COPY = {
         footerAccess: 'Truy cập',
         footerReg: 'Đăng ký',
         modules: [
-            { title: 'Tài chính thông minh', desc: 'Kiểm soát toàn diện hoạt động, chi phí và lợi nhuận với số liệu thời gian thực.' },
-            { title: 'Sophia — AI Vận hành', desc: 'Công cụ trí tuệ nhân tạo tích hợp phân tích, khuyến nghị và hành động.' },
-            { title: 'Khí hậu Tài chính', desc: 'Hệ thống động thích ứng UI theo trạng thái kinh tế: Siembra, Cosecha hoặc Tormenta.' },
-            { title: 'Quản lý vai trò', desc: 'Truy cập phân tầng: Admin, Supervisor và Vận hành với quyền khác nhau.' },
-            { title: 'Vận hành & Lô hàng', desc: 'Truy xuất nguồn gốc đầy đủ của quy trình sản xuất, nguyên liệu đầu vào và hiệu suất lô hàng.' },
-            { title: 'Ma trận Nhịp điệu', desc: 'Trực quan hóa và quản lý ưu tiên vận hành với hệ thống kanban theo nhịp điệu.' },
+            { title: 'Tài chính thông minh', desc: 'Kiểm soát toàn diện thu nhập, chi phí và tính thanh khoản với tính toán dự kiến.' },
+            { title: 'Sophia — Đại lý vĩ mô', desc: 'Điều phối các đại lý vi mô giám sát tài chính, vận hành và bộ nhớ lịch sử.' },
+            { title: 'Kho lưu trữ kỹ thuật số', desc: 'Cơ sở kiến thức của bạn với tìm kiếm ngữ nghĩa và truy xuất tài liệu (RAG).' },
+            { title: 'Sinh trắc học nâng cao', desc: 'Truy cập an toàn và nhanh chóng qua vân tay hoặc FaceID với công nghệ WebAuthn.' },
+            { title: 'Đồng bộ hóa ngoại tuyến', desc: 'Hoạt động không cần internet; các thay đổi được lưu cục bộ và đồng bộ sau.' },
+            { title: 'Đầu vào & Truy xuất', desc: 'Theo dõi chính xác các lô sản xuất, mức tiêu thụ và hiệu quả tại mỗi trạm.' },
         ],
     },
 } as const
@@ -181,20 +182,22 @@ const COPY = {
 type Lang = 'es' | 'en' | 'vn'
 
 /* ─── ICONS ─────────────────────────────────────────────────────── */
-const MODULE_ICONS = [BarChart3, Brain, Activity, Users, Layers, Target]
-const MODULE_COLORS = ['blue', 'blue', 'red', 'blue', 'blue', 'blue']
-const MODULE_TAGS = ['FIN', 'AI', 'SYS', 'ORG', 'OPS', 'RHY']
+const MODULE_ICONS = [BarChart3, Brain, Database, Fingerprint, Wifi, Activity]
+const MODULE_COLORS = ['blue', 'blue', 'blue', 'blue', 'blue', 'red']
+const MODULE_TAGS = ['FIN', 'MACRO', 'VALT', 'AUTH', 'SYNC', 'OPS']
 const ROLE_ICONS = [Shield, Globe, Layers]
 
 const STATS_VALUES = ['100%', '3', '360°', 'v1.0']
 const STATS_ICONS = [Zap, Activity, LineChart, Sparkles]
 
 const SYSTEM_LOGS = [
-    'SERENDIPITY_OS_V1.0 · ANTHROPOS_CORE',
-    'FINANCIAL_CLIMATE: SIEMBRA · OPTIMAL',
-    'SOPHIA_AI: ACTIVE · PROCESSING',
-    'OPS_MATRIX: 94.2% EFFICIENCY',
-    'NEURAL_LINK: ESTABLISHED · SECURE',
+    'ANTHROPOS_CORE_V1.1 · NEURAL_LINK_ESTABLISHED',
+    'SOPHIA_MACRO: ORCHESTRATING_MICRO_AGENTS',
+    'SAGRARIO_VAULT: RAG_PROTOCOL_ACTIVE',
+    'OFFLINE_RELIANCE: SYNC_BUFFER_READY',
+    'FINANCE_CLIMATE: SIEMBRA (STEADY_GROWTH)',
+    'SECURITY_LAYER: WEBAUTHN_BIOMETRICS_PASS',
+    'REPORT_ENGINE: PDF_EXPORT_CAPABLE',
 ]
 
 
@@ -773,21 +776,42 @@ function SophiaVisual() {
                 style={{ zIndex: 20 }}
             >
                 <Brain size={40} className="text-white" />
+                
+                {/* PDF and File indicators orbiting Sophia */}
+                <motion.div 
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-[-40px]"
+                >
+                    <div className="absolute top-0 right-0 w-8 h-8 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-md">
+                        <FileText size={16} className="text-blue-600" />
+                    </div>
+                </motion.div>
+                
+                <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-[-60px]"
+                >
+                    <div className="absolute bottom-4 left-0 w-8 h-8 rounded-xl bg-white border border-blue-100 flex items-center justify-center shadow-md">
+                        <Archive size={16} className="text-blue-600" />
+                    </div>
+                </motion.div>
             </motion.div>
 
             {/* Floating label chips — z-30, always on top */}
             {[
-                { label: 'ANALYZING', x: '-65%', y: '-15%' },
-                { label: 'INSIGHT', x: '55%', y: '-20%' },
-                { label: 'ACTIVE', x: '-60%', y: '30%' },
-                { label: 'SECURE', x: '50%', y: '35%' },
+                { label: 'ORCHESTRATING', x: '-70%', y: '-25%' },
+                { label: 'SAGRARIO LINK', x: '60%', y: '-30%' },
+                { label: 'OFFLINE_READY', x: '-65%', y: '40%' },
+                { label: 'REPORT_GEN', x: '55%', y: '45%' },
             ].map((chip, i) => (
                 <motion.div
                     key={i}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.5 + i * 0.2 }}
-                    className="absolute text-[8px] font-black uppercase tracking-[0.25em] bg-[var(--card)] border border-[var(--border)] px-2.5 py-1.5 rounded-full text-blue-500 whitespace-nowrap shadow-sm"
+                    className="absolute text-[8px] font-black uppercase tracking-[0.25em] bg-[var(--card)] border border-[var(--border)] px-3 py-2 rounded-full text-blue-500 whitespace-nowrap shadow-sm apple-blur"
                     style={{ left: chip.x, top: chip.y, zIndex: 30 }}
                 >
                     {chip.label}
