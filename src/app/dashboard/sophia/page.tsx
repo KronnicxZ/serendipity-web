@@ -19,8 +19,10 @@ import {
     Database,
     Search,
     BrainCircuit,
-    Shield
+    Shield,
+    Download
 } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { useSophia } from '@/hooks/use-sophia'
@@ -92,6 +94,66 @@ export default function SophiaPage() {
                 title: t('sophia.vault.uploadError'),
                 message: error instanceof Error ? error.message : 'Unknown error'
             })
+        }
+    }
+
+    const downloadMessageAsPDF = (content: string) => {
+        try {
+            const doc = new jsPDF()
+            
+            // Branding
+            doc.setFillColor(30, 58, 138)
+            doc.rect(0, 0, 210, 40, 'F')
+            
+            doc.setFontSize(22)
+            doc.setTextColor(255, 255, 255)
+            doc.text("ANTHROPOS OS", 20, 25)
+            
+            doc.setFontSize(10)
+            doc.setTextColor(200, 200, 200)
+            doc.text("Macro-Inteligencia SOPHIA | Reporte de Sistema", 20, 32)
+            
+            doc.setFontSize(9)
+            doc.setTextColor(255, 255, 255)
+            doc.text(`EMITIDO: ${new Date().toLocaleString()}`, 140, 25)
+            
+            // Body
+            doc.setFontSize(12)
+            doc.setTextColor(30, 41, 59)
+            
+            const cleanContent = content.replace(/\*\*/g, '')
+            const splitText = doc.splitTextToSize(cleanContent, 170)
+            
+            let y = 55
+            const lineHeight = 7
+            const pageHeight = 270
+            
+            splitText.forEach((line: string) => {
+                if (y > pageHeight) {
+                    doc.addPage()
+                    y = 20
+                }
+                doc.text(line, 20, y)
+                y += lineHeight
+            })
+            
+            const totalPages = doc.getNumberOfPages()
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i)
+                doc.setFontSize(8)
+                doc.setTextColor(150, 150, 150)
+                doc.text(`Serendipity Bros © 2026 - Reporte Sophia Core - Página ${i} de ${totalPages}`, 105, 290, { align: 'center' })
+            }
+            
+            doc.save(`Reporte_Sophia_${Date.now()}.pdf`)
+            
+            addNotification({
+                type: 'SUCCESS',
+                title: 'Reporte Generado',
+                message: 'El PDF se ha descargado correctamente.'
+            })
+        } catch (error) {
+            console.error('PDF Error:', error)
         }
     }
 
@@ -213,11 +275,37 @@ export default function SophiaPage() {
                                                             : part
                                                     )}
                                                     {msg.agentSource && (
-                                                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
-                                                            <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-500">
-                                                                <Database size={12} />
+                                                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between gap-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-500">
+                                                                    <Database size={12} />
+                                                                </div>
+                                                                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--muted-foreground)]">{t('sophia.source')}: {msg.agentSource}</span>
                                                             </div>
-                                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--muted-foreground)]">{t('sophia.source')}: {msg.agentSource}</span>
+                                                            {msg.role === 'sophia' && (
+                                                                <Button 
+                                                                    variant="ghost" 
+                                                                    size="sm" 
+                                                                    className="!h-8 !rounded-xl !px-3 font-bold text-[9px] uppercase tracking-widest bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-all flex items-center gap-2"
+                                                                    onClick={() => downloadMessageAsPDF(msg.content)}
+                                                                >
+                                                                    <Download size={14} />
+                                                                    Descargar PDF
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {msg.role === 'sophia' && !msg.agentSource && (
+                                                        <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                className="!h-8 !rounded-xl !px-3 font-bold text-[9px] uppercase tracking-widest bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-all flex items-center gap-2"
+                                                                onClick={() => downloadMessageAsPDF(msg.content)}
+                                                            >
+                                                                <Download size={14} />
+                                                                Descargar Informe
+                                                            </Button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -433,9 +521,24 @@ export default function SophiaPage() {
                             </div>
                             <h3 className="font-bold text-[var(--foreground)] text-sm tracking-tight">{t('sophia.activeNodes')}</h3>
                         </div>
-                        <div className="space-y-6">
+                        <motion.div
+                            className="space-y-6"
+                            initial="hidden"
+                            animate="visible"
+                            variants={{
+                                hidden: { opacity: 0 },
+                                visible: { opacity: 1, transition: { staggerChildren: 0.05 } }
+                            }}
+                        >
                             {practicalAgents.map((agent) => (
-                                <div key={agent.id} className="group cursor-pointer">
+                                <motion.div
+                                    key={agent.id}
+                                    className="group cursor-pointer"
+                                    variants={{
+                                        hidden: { opacity: 0, x: -10 },
+                                        visible: { opacity: 1, x: 0 }
+                                    }}
+                                >
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className="text-xs font-bold tracking-tight text-[var(--foreground)]">
                                             {(t as any)(`agents.${agent.id}.name`)}
@@ -458,9 +561,9 @@ export default function SophiaPage() {
                                             transition={{ duration: 1, repeat: agent.status === 'ACTIVE' ? Infinity : 0, repeatType: 'reverse' }}
                                         />
                                     </div>
-                                </div>
+                                </motion.div>
                             ))}
-                        </div>
+                        </motion.div>
                     </Card>
 
                     {/* Harmony Status */}

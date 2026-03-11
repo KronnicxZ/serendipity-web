@@ -92,8 +92,8 @@ export function Sidebar({ isOpen, isDesktop, setOpen, menuItems }: SidebarProps)
                                     )}
                                 />
                                 {(isOpen || !isDesktop) && (
-                                    <div className="flex flex-col flex-1 overflow-hidden">
-                                        <span className="font-bold text-[15px] whitespace-nowrap leading-none mb-1">{item.name}</span>
+                                    <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+                                        <span className="font-bold text-[15px] whitespace-nowrap truncate leading-none mb-1">{item.name}</span>
                                         {item.description && (
                                             <span className={cn(
                                                 "text-[10px] font-medium uppercase tracking-tight truncate",

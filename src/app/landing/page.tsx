@@ -300,23 +300,13 @@ function LangSelector({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
 
 /* ─── PAGE ──────────────────────────────────────────────────────── */
 export default function LandingPage() {
-    const [lang, setLangState] = useState<Lang>('es')
-    const { language, setLanguage } = useTranslation()
-
-    // Sync with app's language context on mount
-    useEffect(() => {
-        setLangState(language as Lang)
-    }, [language])
+    const { language } = useTranslation()
+    const lang = (language as Lang) || 'es'
 
     // Apply light mode on mount (landing defaults to light)
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', 'light')
     }, [])
-
-    // When user changes lang in landing via AuthControls, keep local state in sync
-    useEffect(() => {
-        setLangState(language as Lang)
-    }, [language])
 
     const c = COPY[lang]
     const { scrollYProgress } = useScroll()

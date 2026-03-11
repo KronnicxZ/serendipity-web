@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/auth-context'
 
@@ -21,5 +21,9 @@ export default function Home() {
     }
   }, [user, authLoading, animationComplete, router])
 
-  return <LoadingScreen onComplete={() => setAnimationComplete(true)} />
+  const handleComplete = useCallback(() => {
+    setAnimationComplete(true)
+  }, [])
+
+  return <LoadingScreen onComplete={handleComplete} />
 }

@@ -116,6 +116,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         if (!supabase) return
         await supabase.auth.signOut()
+        
+        // Force a hard reload to clear any remaining cache and state
+        window.location.href = '/login'
     }
 
     return (

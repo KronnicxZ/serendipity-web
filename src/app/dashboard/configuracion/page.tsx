@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Card, Button, Input, Badge } from '@/components/ui-library'
-import { Settings, Bell, Globe, Lock, Shield, UserCheck, ShieldAlert, Cpu, Database, Mail, MessageSquare, Clock } from 'lucide-react'
+import { Settings, Bell, Globe, Lock, Shield, UserCheck, ShieldAlert, Cpu, Database, Mail, MessageSquare, Clock, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/context/language-context'
 
@@ -11,11 +11,41 @@ import { useUsers } from '@/hooks/use-users'
 import { toast } from 'sonner'
 import { BiometricSettings } from '@/components/settings/biometric-settings'
 
+import { useAuth } from '@/context/auth-context'
+
 export default function ConfiguracionPage() {
     const { t } = useTranslation()
     const { settings, updateSettings, updateNestedSetting } = useSettings()
-    const { users, loading: loadingUsers, updateUserRole } = useUsers()
-    const [activeTab, setActiveTab] = useState('GLOBAL')
+    const { users, loading: loadingUsers, updateUserRole, createUser, deleteUser } = useUsers()
+    const { user: currentUser } = useAuth()
+    const isAdmin = currentUser?.role === 'ADMIN'
+    const [activeTab, setActiveTab] = useState(isAdmin ? 'GLOBAL' : 'SECURITY')
+    
+    // User Creation State
+    const [showCreateForm, setShowCreateForm] = useState(false)
+    const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'OPERATIVO' })
+    const [isCreating, setIsCreating] = useState(false)
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setIsCreating(true)
+        const res = await createUser(newUser)
+        setIsCreating(false)
+        if (res.success) {
+            toast.success(t('temple.userCreated'))
+            setShowCreateForm(false)
+            setNewUser({ name: '', email: '', password: '', role: 'OPERATIVO' })
+        } else {
+            toast.error(res.error || "Error")
+        }
+    }
+
+    const handleDeleteUser = async (userId: string) => {
+        if (!confirm(t('temple.confirmDelete'))) return
+        const res = await deleteUser(userId)
+        if (res.success) toast.success(t('temple.userDeleted'))
+        else toast.error(res.error || "Error")
+    }
 
     const handleSave = () => {
         toast.success(t('common.success'), {
@@ -23,13 +53,15 @@ export default function ConfiguracionPage() {
         })
     }
 
-    const tabs = [
-        { id: 'GLOBAL', n: t('temple.globalParams'), i: Globe },
-        { id: 'NOTIF', n: t('temple.notifications'), i: Bell },
-        { id: 'SECURITY', n: t('temple.security'), i: Shield },
-        { id: 'ROLES', n: t('temple.roles'), i: Lock },
-        { id: 'USERS', n: t('common.permissions'), i: UserCheck },
+    const allTabs = [
+        { id: 'GLOBAL', n: t('temple.globalParams'), i: Globe, adminOnly: true },
+        { id: 'NOTIF', n: t('temple.notifications'), i: Bell, adminOnly: false },
+        { id: 'SECURITY', n: t('temple.security'), i: Shield, adminOnly: false },
+        { id: 'ROLES', n: t('temple.roles'), i: Lock, adminOnly: true },
+        { id: 'USERS', n: t('common.permissions'), i: UserCheck, adminOnly: true },
     ]
+    
+    const tabs = allTabs.filter(tab => !tab.adminOnly || isAdmin)
 
     return (
         <div className="space-y-12">
@@ -228,9 +260,69 @@ export default function ConfiguracionPage() {
                         <section className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <div className="space-y-8">
                                 <div className="flex items-center gap-3">
-                                    <UserCheck className="text-[var(--muted-foreground)]" size={20} />
-                                    <h3 className="font-bold text-xl tracking-tight text-[var(--foreground)]">{t('common.permissions')}</h3>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-bold text-xl tracking-tight text-[var(--foreground)]">{t('common.permissions')}</h3>
+                                        <Button 
+                                            variant={showCreateForm ? "ghost" : "primary"} 
+                                            size="sm" 
+                                            onClick={() => setShowCreateForm(!showCreateForm)}
+                                        >
+                                            {showCreateForm ? t('common.backToStart') : t('temple.createUser')}
+                                        </Button>
+                                    </div>
                                 </div>
+
+                                {showCreateForm && (
+                                    <form onSubmit={handleCreateUser} className="p-8 rounded-[24px] bg-blue-500/5 border border-blue-500/20 space-y-6 animate-in fade-in zoom-in-95 duration-300">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider ml-1 text-[var(--muted-foreground)]">{t('auth.nameLabel')}</label>
+                                                <Input 
+                                                    required 
+                                                    value={newUser.name} 
+                                                    onChange={e => setNewUser({...newUser, name: e.target.value})}
+                                                    placeholder="Ej. Juan Pérez"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider ml-1 text-[var(--muted-foreground)]">{t('auth.emailLabel')}</label>
+                                                <Input 
+                                                    required 
+                                                    type="email" 
+                                                    value={newUser.email} 
+                                                    onChange={e => setNewUser({...newUser, email: e.target.value})}
+                                                    placeholder="juan@serendipity.com"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider ml-1 text-[var(--muted-foreground)]">{t('auth.password')}</label>
+                                                <Input 
+                                                    required 
+                                                    type="password" 
+                                                    value={newUser.password} 
+                                                    onChange={e => setNewUser({...newUser, password: e.target.value})}
+                                                    placeholder="••••••••"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-bold uppercase tracking-wider ml-1 text-[var(--muted-foreground)]">{t('auth.authority')}</label>
+                                                <select 
+                                                    className="w-full h-[46px] bg-[var(--secondary)] border border-[var(--border)] rounded-[12px] px-4 text-sm font-bold"
+                                                    value={newUser.role}
+                                                    onChange={e => setNewUser({...newUser, role: e.target.value})}
+                                                >
+                                                    <option value="ADMIN">ADMIN</option>
+                                                    <option value="SUPERVISOR">SUPERVISOR</option>
+                                                    <option value="OPERATIVO">OPERATIVO</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <Button type="submit" className="w-full h-12" isLoading={isCreating}>
+                                            {t('temple.addUser')}
+                                        </Button>
+                                    </form>
+                                )}
+
                                 <div className="space-y-4">
                                     {loadingUsers ? (
                                         <div className="space-y-4">
@@ -240,33 +332,53 @@ export default function ConfiguracionPage() {
                                         </div>
                                     ) : (
                                         users.map(user => (
-                                            <div key={user.id} className="p-6 rounded-[20px] bg-[var(--secondary)]/30 border border-[var(--border)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                                                <div className="space-y-1">
-                                                    <p className="font-bold text-[var(--foreground)]">{user.name}</p>
-                                                    <p className="text-xs text-[var(--muted-foreground)]">{user.email}</p>
-                                                    <Badge variant="default" className="mt-1 text-[10px] font-mono tracking-wider border-[var(--border)]">
-                                                        {user.role}
-                                                    </Badge>
+                                            <div key={user.id} className="p-6 rounded-[20px] bg-[var(--secondary)]/30 border border-[var(--border)] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 group">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
+                                                        {user.name.charAt(0)}
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <p className="font-bold text-[var(--foreground)]">{user.name}</p>
+                                                        <p className="text-xs text-[var(--muted-foreground)]">{user.email}</p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    {(['ADMIN', 'SUPERVISOR', 'OPERATIVO'] as const).map(role => (
-                                                        <Button
-                                                            key={role}
-                                                            variant={user.role === role ? 'secondary' : 'ghost'}
-                                                            size="sm"
-                                                            className={cn(
-                                                                "text-[10px] h-8 px-3 rounded-lg font-bold border border-transparent transition-all",
-                                                                user.role === role && "border-blue-500/20 bg-blue-500/10 text-blue-500"
-                                                            )}
-                                                            onClick={async () => {
-                                                                const res = await updateUserRole(user.id, role);
-                                                                if (res.success) toast.success("Rol actualizado");
-                                                                else toast.error("Error al actualizar");
-                                                            }}
+                                                
+                                                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full lg:w-auto">
+                                                    <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-xl mr-2">
+                                                        {(['ADMIN', 'SUPERVISOR', 'OPERATIVO'] as const).map(role => (
+                                                            <button
+                                                                key={role}
+                                                                className={cn(
+                                                                    "text-[10px] h-7 px-2.5 rounded-lg font-bold transition-all",
+                                                                    user.role === role 
+                                                                        ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm ring-1 ring-black/5" 
+                                                                        : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                                                                )}
+                                                                onClick={async () => {
+                                                                    if (user.id === currentUser?.id) {
+                                                                        toast.error("No puedes cambiar tu propio rol");
+                                                                        return;
+                                                                    }
+                                                                    const res = await updateUserRole(user.id, role);
+                                                                    if (res.success) toast.success("Rol actualizado");
+                                                                    else toast.error("Error al actualizar");
+                                                                }}
+                                                            >
+                                                                {role}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    
+                                                    {user.id !== currentUser?.id && (
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="icon" 
+                                                            className="text-red-500 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                            onClick={() => handleDeleteUser(user.id)}
                                                         >
-                                                            {role}
+                                                            <Trash2 size={16} />
                                                         </Button>
-                                                    ))}
+                                                    )}
                                                 </div>
                                             </div>
                                         ))

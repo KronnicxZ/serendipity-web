@@ -167,7 +167,7 @@
 
 /* Smooth Transitions - snappy feel without overriding Framer Motion */
 .transition-all {
-  transition-duration: 200ms;
+  transition-duration: 150ms;
 }
 
 @keyframes skeleton-shimmer {

@@ -60,15 +60,20 @@ export default function LoginPage() {
 
             if (sessionRequest) {
                 await loginWithOtp(sessionRequest.email, sessionRequest.otp)
-                router.push('/dashboard')
                 addNotification({
                     type: 'SUCCESS',
-                    title: t('auth.biometricSuccessTitle'),
-                    message: t('auth.biometricSuccessMessage')
+                    title: t('auth.biometricSuccessTitle') || 'Acceso exitoso',
+                    message: t('auth.biometricSuccessMessage') || 'Redirigiendo al panel...'
                 })
+                window.location.href = '/dashboard'
             }
         } catch (error: any) {
-            console.error(error)
+            console.error('[Biometric Error]', error)
+            addNotification({
+                type: 'ERROR',
+                title: t('auth.biometricErrorTitle') || 'Error biométrico',
+                message: error.message || 'Error validando la huella.'
+            })
         } finally {
             setIsBiometricAuthenticating(false);
         }
@@ -88,7 +93,7 @@ export default function LoginPage() {
                 // Save for handleBiometric to use later
                 localStorage.setItem('anthropos_biometric_auth_pending', JSON.stringify({ email: identity }))
             } else {
-                router.push('/dashboard')
+                window.location.href = '/dashboard'
             }
         } catch (error: any) {
             console.error(error)
@@ -272,9 +277,9 @@ export default function LoginPage() {
                                         onClick={handleBiometric}
                                         disabled={loading || isBiometricAuthenticating}
                                         isLoading={isBiometricAuthenticating}
-                                        className="!w-14 !h-14 !rounded-[20px] bg-[var(--secondary)] text-blue-600 hover:bg-blue-600/10 border border-[var(--border)] shadow-sm flex items-center justify-center transition-all active:scale-[0.95]"
+                                        className="!w-14 !h-14 !rounded-full bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 flex items-center justify-center transition-all active:scale-[0.95] shrink-0"
                                     >
-                                        {!isBiometricAuthenticating && <Fingerprint size={28} />}
+                                        {!isBiometricAuthenticating && <Fingerprint size={26} />}
                                     </Button>
                                 )}
                             </div>
@@ -309,7 +314,7 @@ export default function LoginPage() {
                                 onClick={() => {
                                     if (isEnrolling || isSkipping) return;
                                     setIsSkipping(true);
-                                    router.push('/dashboard');
+                                    window.location.href = '/dashboard';
                                 }}
                             />
                             <motion.div
@@ -338,7 +343,7 @@ export default function LoginPage() {
                                                         localStorage.setItem('anthropos_biometric_auth', pending);
                                                         localStorage.removeItem('anthropos_biometric_auth_pending');
                                                     }
-                                                    router.push('/dashboard');
+                                                    window.location.href = '/dashboard';
                                                 } else {
                                                     setIsEnrolling(false);
                                                 }
@@ -357,7 +362,7 @@ export default function LoginPage() {
                                         onClick={() => {
                                             if (isEnrolling || isSkipping) return;
                                             setIsSkipping(true);
-                                            router.push('/dashboard');
+                                            window.location.href = '/dashboard';
                                         }}
                                         isLoading={isSkipping}
                                         disabled={isEnrolling || isSkipping}

@@ -44,7 +44,11 @@ export function useSophia() {
     const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
-        setVaultDocs(VaultService.getDocuments());
+        const loadDocs = async () => {
+            const docs = await VaultService.getDocuments();
+            setVaultDocs(docs);
+        };
+        loadDocs();
     }, []);
 
     const alerts = useMemo(() => {
@@ -83,9 +87,13 @@ export function useSophia() {
         }
     };
 
-    const deleteFromVault = (id: string) => {
-        VaultService.deleteDocument(id);
-        setVaultDocs(prev => prev.filter(d => d.id !== id));
+    const deleteFromVault = async (id: string) => {
+        try {
+            await VaultService.deleteDocument(id);
+            setVaultDocs(prev => prev.filter(d => d.id !== id));
+        } catch (error) {
+            console.error("Delete Error:", error);
+        }
     };
 
     const generateDailyReport = () => {

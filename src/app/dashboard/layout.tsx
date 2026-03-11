@@ -161,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             description: t('sidebar.settingsDesc'),
             icon: Settings,
             href: '/dashboard/configuracion',
-            roles: ['ADMIN']
+            roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO']
         },
     ], [t])
 
@@ -228,10 +228,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <AnimatePresence mode="popLayout" initial={false}>
                         <motion.div
                             key={pathname}
-                            initial={{ opacity: 0, y: 4 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
+                            initial={{ opacity: 0, scale: 0.98, y: 8 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 1.02, y: -8 }}
+                            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                         >
                             {children}
                         </motion.div>

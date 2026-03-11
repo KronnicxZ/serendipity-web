@@ -349,7 +349,13 @@ export const es = {
         flowManager: "Gestor de Flujos",
         flowManagerDesc: "Control de operaciones y visión de Sophia.",
         plantAgent: "Agente de Planta",
-        plantAgentDesc: "Escaneo de lotes y registro de ritmos."
+        plantAgentDesc: "Escaneo de lotes y registro de ritmos.",
+        createUser: "Crear Nuevo Usuario",
+        addUser: "Agregar Agente",
+        deleteUser: "Eliminar Usuario",
+        confirmDelete: "¿Seguro que deseas eliminar este usuario? Esta acción es irreversible.",
+        userCreated: "Usuario creado exitosamente",
+        userDeleted: "Usuario eliminado correctamente"
     },
     agents: {
         'ag-fin': { name: 'Agente 01: Tesorería', desc: 'Vigila el Punto Cero y el flujo de caja.' },

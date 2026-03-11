@@ -52,9 +52,41 @@ export function useUsers() {
         }
     }
 
+    const createUser = async (userData: { email: string, password: string, name: string, role: string }) => {
+        try {
+            const res = await fetch('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData)
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create user');
+            
+            await fetchUsers();
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+
+    const deleteUser = async (userId: string) => {
+        try {
+            const res = await fetch(`/api/admin/users?id=${userId}`, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to delete user');
+            
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            return { success: true };
+        } catch (err: any) {
+            return { success: false, error: err.message };
+        }
+    }
+
     useEffect(() => {
         fetchUsers()
     }, [])
 
-    return { users, loading, error, refresh: fetchUsers, updateUserRole }
+    return { users, loading, error, refresh: fetchUsers, updateUserRole, createUser, deleteUser }
 }

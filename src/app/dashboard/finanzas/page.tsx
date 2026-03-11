@@ -60,8 +60,20 @@ export default function FinanzasPage() {
                 </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-                <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm overflow-hidden relative bg-[var(--card)]">
+            <motion.div 
+                className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                        opacity: 1,
+                        transition: { staggerChildren: 0.1 }
+                    }
+                }}
+            >
+                <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+                    <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm overflow-hidden relative bg-[var(--card)]">
                     <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50 z-0", finData.climate.weatherClass)} />
                     <div className="relative z-10 flex items-center gap-4">
                         <div className="w-12 h-12 flex items-center justify-center bg-blue-500/10 text-blue-500 rounded-[16px] border border-blue-500/20">
@@ -98,9 +110,11 @@ export default function FinanzasPage() {
                             </div>
                         </div>
                     </div>
-                </Card>
+                    </Card>
+                </motion.div>
 
-                <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)] relative overflow-hidden transition-colors duration-500">
+                <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+                    <Card className="p-8 lg:p-10 space-y-8 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)] relative overflow-hidden transition-colors duration-500">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
                     <div className="flex items-center gap-4 relative z-10">
                         <div className="w-12 h-12 flex items-center justify-center bg-emerald-500/10 text-emerald-500 rounded-[16px] border border-emerald-500/20">
@@ -135,8 +149,9 @@ export default function FinanzasPage() {
                             </Button>
                         </div>
                     </div>
-                </Card>
-            </div>
+                    </Card>
+                </motion.div>
+            </motion.div>
 
             {/* Expenses Breakdown */}
             <Card className="p-8 lg:p-10 rounded-[28px] border-none ring-1 ring-[var(--border)] shadow-sm bg-[var(--card)]">

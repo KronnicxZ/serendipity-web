@@ -33,12 +33,12 @@ export function MobileNav({ filteredMenu }: MobileNavProps) {
                             href={item.href}
                             prefetch={true}
                             className={cn(
-                                "flex flex-col items-center justify-center gap-1.5 h-full transition-all duration-300 relative",
+                                "flex flex-col items-center justify-center gap-1.5 h-full transition-all duration-200 relative",
                                 isActive ? "text-blue-600" : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                             )}
                         >
                             <div className={cn(
-                                "p-2 rounded-xl transition-all duration-300",
+                                "p-2 rounded-xl transition-all duration-200",
                                 isActive && "bg-blue-600/10 shadow-sm"
                             )}>
                                 <item.icon size={20} className={cn("transition-transform", isActive && "scale-110")} />
