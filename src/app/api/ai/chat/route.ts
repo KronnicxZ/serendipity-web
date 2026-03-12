@@ -41,9 +41,9 @@ class OpenRouterProvider implements AIProvider {
     private apiKey: string;
     private model: string;
 
-    constructor(apiKey: string, model = 'google/gemini-2.0-flash-lite-preview-02-05:free') {
+    constructor(apiKey: string, model?: string) {
         this.apiKey = apiKey;
-        this.model = model;
+        this.model = model || process.env.OPEN_ROUTER_MODEL || 'google/gemini-2.0-flash-exp:free';
     }
 
     async generateResponse(systemPrompt: string, userPrompt: string): Promise<string> {
@@ -51,7 +51,9 @@ class OpenRouterProvider implements AIProvider {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${this.apiKey}`,
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "HTTP-Referer": process.env.NEXT_PUBLIC_ORIGIN || "https://serendipity-web.vercel.app",
+                "X-Title": "Serendipity Anthropos System"
             },
             body: JSON.stringify({
                 "model": this.model,
@@ -64,10 +66,14 @@ class OpenRouterProvider implements AIProvider {
 
         if (!response.ok) {
             const error = await response.json();
+            console.error("OpenRouter API Detail Error:", error);
             throw new Error(`OpenRouter Error: ${error.error?.message || response.statusText}`);
         }
 
         const data = await response.json();
+        if (!data.choices || data.choices.length === 0) {
+            throw new Error("OpenRouter no devolvió ninguna respuesta válida.");
+        }
         return data.choices[0].message.content;
     }
 }
