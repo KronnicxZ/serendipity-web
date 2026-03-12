@@ -130,7 +130,12 @@ export const es = {
         adminCodeLabel: "Código Maestro Admin",
         adminCodePlaceholder: "Ingrese código de autorización",
         adminCodeErrorTitle: "Código Inválido",
-        adminCodeErrorMessage: "El código de autorización de administrador es incorrecto."
+        adminCodeErrorMessage: "El código de autorización de administrador es incorrecto.",
+        mfaTitle: "Verificación Ritual",
+        mfaDescription: "El Templo requiere una segunda llave de paso enviada a tu correo electrónico para sincronizar tu identidad.",
+        mfaCodeLabel: "Código de Sincronía",
+        mfaCodeHelp: "Ingresa los 6 dígitos enviados a tu correo",
+        mfaAction: "Verificar Identidad",
     },
     dashboard: {
         activeOperation: "Operación Activa",

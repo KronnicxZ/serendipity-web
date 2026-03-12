@@ -424,16 +424,16 @@ export default function LoginPage() {
                                             <ShieldCheck size={24} />
                                         </div>
                                         <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-[var(--foreground)]">
-                                            Verificación Ritual
+                                            {t('auth.mfaTitle') || 'Verificación Ritual'}
                                         </h1>
                                         <p className="text-[var(--muted-foreground)] text-sm font-medium leading-relaxed">
-                                            El Templo requiere una segunda llave de paso enviada a tu correo electrónico para sincronizar tu identidad.
+                                            {t('auth.mfaDescription') || 'El Templo requiere una segunda llave de paso enviada a tu correo electrónico para sincronizar tu identidad.'}
                                         </p>
                                     </header>
 
                                     <form onSubmit={handleMFA} className="space-y-8">
                                         <div className="space-y-4">
-                                            <label className="text-[13px] font-bold text-[var(--muted-foreground)] ml-1 uppercase tracking-widest block text-center">Código de Sincronía</label>
+                                            <label className="text-[13px] font-bold text-[var(--muted-foreground)] ml-1 uppercase tracking-widest block text-center">{t('auth.mfaCodeLabel') || 'Código de Sincronía'}</label>
                                             <div className="relative group max-w-[280px] mx-auto">
                                                 <div className={cn("absolute left-4 top-1/2 -translate-y-1/2 transition-transform", mfaError ? "text-red-500" : "text-amber-500 group-focus-within:scale-110")}>
                                                     <KeyRound size={22} />
@@ -459,7 +459,7 @@ export default function LoginPage() {
                                             {mfaError ? (
                                                 <p className="text-[11px] font-bold text-center text-red-500 uppercase tracking-tighter animate-pulse">{mfaError}</p>
                                             ) : (
-                                                <p className="text-[10px] text-center text-[var(--muted-foreground)] uppercase tracking-tighter">Ingresa los 6 dígitos enviados a tu correo</p>
+                                                <p className="text-[10px] text-center text-[var(--muted-foreground)] uppercase tracking-tighter">{t('auth.mfaCodeHelp') || 'Ingresa los 6 dígitos enviados a tu correo'}</p>
                                             )}
                                         </div>
 
@@ -469,7 +469,7 @@ export default function LoginPage() {
                                                 className="w-full !h-14 text-base !rounded-[20px] bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 font-bold uppercase tracking-widest transition-all active:scale-[0.98]"
                                                 isLoading={isVerifyingOtp}
                                             >
-                                                Verificar Identidad
+                                                {t('auth.mfaAction') || 'Verificar Identidad'}
                                                 {!isVerifyingOtp && <CheckCircle2 size={18} className="ml-2" />}
                                             </Button>
 
@@ -479,7 +479,7 @@ export default function LoginPage() {
                                                 onClick={() => setStep('LOGIN')}
                                                 className="text-[11px] font-bold uppercase tracking-widest text-[var(--muted-foreground)]"
                                             >
-                                                Volver al inicio
+                                                {t('common.backToStart') || 'Volver al inicio'}
                                             </Button>
                                         </div>
                                     </form>

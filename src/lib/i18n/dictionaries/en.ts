@@ -136,7 +136,12 @@ export const en = {
         adminCodeLabel: "Admin Master Code",
         adminCodePlaceholder: "Enter authorization code",
         adminCodeErrorTitle: "Invalid Code",
-        adminCodeErrorMessage: "The admin authorization code is incorrect."
+        adminCodeErrorMessage: "The admin authorization code is incorrect.",
+        mfaTitle: "Ritual Verification",
+        mfaDescription: "The Temple requires a second passkey sent to your email to synchronize your identity.",
+        mfaCodeLabel: "Sync Code",
+        mfaCodeHelp: "Enter the 6 digits sent to your email",
+        mfaAction: "Verify Identity",
     },
     dashboard: {
         activeOperation: "Active Operation",

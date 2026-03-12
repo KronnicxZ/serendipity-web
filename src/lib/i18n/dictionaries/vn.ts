@@ -345,6 +345,7 @@ export const vn = {
         pushNotificationsDesc: "Cảnh báo trên thiết bị di động.",
         twoFactorAuth: "Xác thực 2 yếu tố (2FA)",
         twoFactorAuthDesc: "Bắt buộc đối với các vai trò truy cập thánh địa.",
+        twoFactorFrequency: "Chỉ yêu cầu mã 1 lần mỗi ngày.",
         sessionTime: "Thời gian phiên",
         sessionTimeDesc: "Tự động đăng xuất sau thời gian không hoạt động.",
         supremeAdmin: "Quản trị viên tối cao",

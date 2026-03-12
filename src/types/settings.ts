@@ -25,7 +25,7 @@ export const DEFAULT_SETTINGS: SystemSettings = {
         push: false
     },
     security: {
-        twoFactorEnabled: true,
+        twoFactorEnabled: false,
         sessionTimeoutMinutes: 45
     }
 };
