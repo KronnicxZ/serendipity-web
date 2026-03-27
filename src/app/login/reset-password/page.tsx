@@ -9,9 +9,11 @@ import { AuthControls } from '@/components/auth-controls'
 import { useNotifications } from '@/context/notification-context'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useAuth } from '@/context/auth-context'
 
 export default function ResetPasswordPage() {
     const { t } = useTranslation()
+    const { updatePassword } = useAuth()
     const { addNotification } = useNotifications()
     const router = useRouter()
 
@@ -35,16 +37,24 @@ export default function ResetPasswordPage() {
 
         setIsLoading(true)
 
-        // Simulating password reset
-        setTimeout(() => {
-            setIsLoading(false)
+        try {
+            await updatePassword(password)
             setIsSuccess(true)
             addNotification({
                 type: 'SUCCESS',
                 title: t('auth.resetSuccessTitle') || 'Clave Actualizada',
                 message: t('auth.resetSuccessMessage') || 'Tu clave ha sido restablecida con éxito.'
             })
-        }, 1500)
+        } catch (error: any) {
+            console.error('Update password error:', error)
+            addNotification({
+                type: 'ERROR',
+                title: t('auth.errorResetTitle') || 'Error',
+                message: error.message || 'No se pudo actualizar la clave.'
+            })
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (

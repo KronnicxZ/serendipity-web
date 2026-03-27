@@ -18,7 +18,7 @@ const REMEMBER_KEY = 'anthropos_remembered_email'
 
 export default function LoginPage() {
     const { login, loading } = useAuth()
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
     const { addNotification } = useNotifications()
     const { settings } = useSettings()
     const router = useRouter()
@@ -327,7 +327,7 @@ export default function LoginPage() {
                                                 {t('auth.register') || 'Regístrate'}
                                             </Link>
                                         </p>
-                                        <Link href={process.env.NEXT_PUBLIC_LANDING_URL || "/"}>
+                                        <Link href={`${process.env.NEXT_PUBLIC_LANDING_URL || "/"}?lang=${language}`}>
                                             <Button variant="ghost" size="sm" className="!rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
                                                 <ChevronLeft size={14} className="mr-1" /> {t('common.backToStart') || 'Volver al inicio'}
                                             </Button>

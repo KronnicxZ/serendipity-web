@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@/context/auth-context'
 import { motion } from 'framer-motion'
 import { Shield, Mail, ArrowRight, ChevronLeft, Send } from 'lucide-react'
 import { Button, Input } from '@/components/ui-library'
@@ -11,6 +12,7 @@ import Link from 'next/link'
 
 export default function ForgotPasswordPage() {
     const { t } = useTranslation()
+    const { resetPassword } = useAuth()
     const { addNotification } = useNotifications()
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -20,16 +22,24 @@ export default function ForgotPasswordPage() {
         e.preventDefault()
         setIsLoading(true)
 
-        // Simulating email sending
-        setTimeout(() => {
-            setIsLoading(false)
+        try {
+            await resetPassword(email)
             setIsSent(true)
             addNotification({
                 type: 'SUCCESS',
                 title: t('auth.resetEmailSentTitle') || 'Enlace Enviado',
                 message: t('auth.resetEmailSentMessage') || 'Revisa tu bandeja de entrada para restablecer tu clave.'
             })
-        }, 1500)
+        } catch (error: any) {
+            console.error('Reset password error:', error)
+            addNotification({
+                type: 'ERROR',
+                title: t('auth.errorResetTitle') || 'Error',
+                message: error.message || 'No se pudo enviar el enlace de recuperación.'
+            })
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (

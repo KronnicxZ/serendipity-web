@@ -23,9 +23,22 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const [isReady, setIsReady] = useState(false)
 
     useEffect(() => {
-        const saved = localStorage.getItem('anthropos-lang') as Language
-        if (saved && (saved === 'es' || saved === 'en' || saved === 'vn')) {
-            setLanguageState(saved)
+        // Enforce language from URL if present (useful for cross-domain link persistence)
+        const params = new URLSearchParams(window.location.search)
+        const urlLang = params.get('lang') as Language
+        
+        if (urlLang && ['es', 'en', 'vn'].includes(urlLang)) {
+            setLanguageState(urlLang)
+            localStorage.setItem('anthropos-lang', urlLang)
+            
+            // Clean up the URL to keep it clean (removes ?lang= from the bar)
+            const cleanUrl = window.location.pathname + window.location.hash
+            window.history.replaceState({}, '', cleanUrl)
+        } else {
+            const saved = localStorage.getItem('anthropos-lang') as Language
+            if (saved && (saved === 'es' || saved === 'en' || saved === 'vn')) {
+                setLanguageState(saved)
+            }
         }
         setIsReady(true)
     }, [])

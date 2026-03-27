@@ -218,7 +218,7 @@ function RegisterForm({ forcedAdmin }: { forcedAdmin?: boolean }) {
 }
 
 export default function RegisterPage({ forcedAdmin }: { forcedAdmin?: boolean }) {
-    const { t } = useTranslation()
+    const { t, language } = useTranslation()
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row bg-[var(--background)] transition-colors duration-500 font-sans overflow-hidden">
@@ -335,7 +335,7 @@ export default function RegisterPage({ forcedAdmin }: { forcedAdmin?: boolean })
                                 </Link>
                             </p>
 
-                            <Link href={process.env.NEXT_PUBLIC_LANDING_URL || "/"}>
+                            <Link href={`${process.env.NEXT_PUBLIC_LANDING_URL || "/"}?lang=${language}`}>
                                 <Button variant="ghost" size="sm" className="!rounded-xl text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
                                     <ChevronLeft size={14} className="mr-1" /> {t('common.backToStart') || 'Back to Start'}
                                 </Button>

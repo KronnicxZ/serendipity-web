@@ -15,8 +15,8 @@ export async function sendMfaEmail(email: string) {
         const hash = crypto.createHmac('sha256', SECRET).update(data).digest('hex')
 
         const { data: responseData, error } = await resend.emails.send({
-            from: 'Anthropos OS <onboarding@resend.dev>',
-            to: email, // Free tier allows sending only to the verified email in Resend
+            from: 'Anthropos OS <noreply@serendipity.vn>',
+            to: email, 
             subject: 'Tu Código de Sincronía - Anthropos OS',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 40px; border: 1px solid #e5e7eb; border-radius: 24px; background-color: #f9fafb;">

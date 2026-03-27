@@ -19,6 +19,8 @@ interface AuthContextType {
     login: (email: string, password: string) => Promise<void>
     loginWithOtp: (email: string, otp: string) => Promise<void>
     register: (email: string, password: string, name: string, role: UserRole) => Promise<void>
+    resetPassword: (email: string) => Promise<void>
+    updatePassword: (password: string) => Promise<void>
     logout: () => Promise<void>
     loading: boolean
 }
@@ -100,9 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!supabase) throw new Error('Supabase Client not initialized')
 
         // Always use the production URL for email redirects.
-        // NEVER use window.location.origin here — it would point to localhost
-        // when an admin creates accounts from their local environment.
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://serendipity-web.vercel.app'
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.serendipity.vn'
         const { error } = await supabase.auth.signUp({
             email,
             password,
@@ -118,6 +118,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error
     }
 
+    const resetPassword = async (email: string) => {
+        if (!supabase) throw new Error('Supabase Client not initialized')
+
+        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.serendipity.vn'
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${siteUrl}/login/reset-password`
+        })
+
+        if (error) throw error
+    }
+
+    const updatePassword = async (password: string) => {
+        if (!supabase) throw new Error('Supabase Client not initialized')
+
+        const { error } = await supabase.auth.updateUser({
+            password
+        })
+
+        if (error) throw error
+    }
+
     const logout = async () => {
         if (!supabase) return
         await supabase.auth.signOut()
@@ -127,7 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, login, loginWithOtp, register, logout, loading }}>
+        <AuthContext.Provider value={{ user, session, login, loginWithOtp, register, resetPassword, updatePassword, logout, loading }}>
             {children}
         </AuthContext.Provider>
     )
