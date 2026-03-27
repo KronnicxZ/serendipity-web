@@ -722,7 +722,10 @@ export default function LandingPage() {
                 initial={{ y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ duration: 0.5 }}
-                className="fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 sm:px-10 h-16 backdrop-blur-md bg-white/80 dark:bg-black/80 border-b border-[var(--border)]"
+                className={cn(
+                    "fixed top-0 inset-x-0 z-50 flex items-center justify-between px-4 sm:px-10 h-16 backdrop-blur-md border-b border-[var(--border)]",
+                    isDark ? "bg-black/80" : "bg-white/95"
+                )}
             >
                 <div className="relative h-9 w-40 shrink-0">
                     <Image
