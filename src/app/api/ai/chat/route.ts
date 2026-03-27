@@ -24,14 +24,38 @@ class GeminiProvider implements AIProvider {
     }
 }
 
-// 3. Claude — Motor principal de Sofia
+// 3. Sofia Backend Proxy — Claude vía servidor (clave segura en WSL2)
+class SofiaProxyProvider implements AIProvider {
+    private baseUrl: string;
+
+    constructor(baseUrl: string) {
+        this.baseUrl = baseUrl;
+    }
+
+    async generateResponse(systemPrompt: string, userPrompt: string): Promise<string> {
+        const response = await fetch(`${this.baseUrl}/api/ai/proxy`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ systemPrompt, userMessage: userPrompt }),
+            signal: AbortSignal.timeout(15000),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`Sofia proxy error ${response.status}: ${(err as any)?.error || response.statusText}`);
+        }
+
+        const data = await response.json() as { text: string };
+        return data.text || '';
+    }
+}
+
+// 3b. Claude directo — requiere ANTHROPIC_API_KEY en Vercel env
 class ClaudeProvider implements AIProvider {
     private apiKey: string;
-    private model: string;
 
-    constructor(apiKey: string, model = 'claude-haiku-4-5-20251001') {
+    constructor(apiKey: string) {
         this.apiKey = apiKey;
-        this.model = model;
     }
 
     async generateResponse(systemPrompt: string, userPrompt: string): Promise<string> {
@@ -43,7 +67,7 @@ class ClaudeProvider implements AIProvider {
                 'content-type': 'application/json',
             },
             body: JSON.stringify({
-                model: this.model,
+                model: 'claude-haiku-4-5-20251001',
                 max_tokens: 1024,
                 system: systemPrompt,
                 messages: [{ role: 'user', content: userPrompt }],
@@ -138,6 +162,7 @@ class OpenRouterProvider implements AIProvider {
 
 // Factoría de IA
 function getAIProvider(providerName: string): AIProvider {
+    const sofiaBase = process.env.SOFIA_API_URL || 'https://dashboard.serendipity.vn';
     const claudeKey = process.env.ANTHROPIC_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
     const openRouterKey = process.env.OPEN_ROUTER_API_KEY;
@@ -147,6 +172,8 @@ function getAIProvider(providerName: string): AIProvider {
                      process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     switch (providerName.toLowerCase()) {
+        case 'sofia':
+            return new SofiaProxyProvider(sofiaBase);
         case 'claude':
             if (!claudeKey) throw new Error("ANTHROPIC_API_KEY no configurada");
             return new ClaudeProvider(claudeKey);
@@ -160,9 +187,7 @@ function getAIProvider(providerName: string): AIProvider {
             if (!geminiKey) throw new Error("API Key de Gemini no configurada");
             return new GeminiProvider(geminiKey);
         default:
-            if (claudeKey) return new ClaudeProvider(claudeKey);
-            if (groqKey) return new GroqProvider(groqKey);
-            throw new Error("No hay proveedores configurados");
+            return new SofiaProxyProvider(sofiaBase);
     }
 }
 
@@ -335,8 +360,8 @@ export async function POST(request: Request) {
             RESPUESTA SIEMPRE EN ESPAÑOL. Usa negritas para resaltar métricas y cifras clave.
         `;
 
-        // ESTRATEGIA DE FALLBACK EN CASCADA — Claude primero (motor de Sofia)
-        const providersToTry = ['claude', 'groq', 'openrouter', 'gemini'];
+        // ESTRATEGIA DE FALLBACK EN CASCADA — Sofia proxy primero (Claude server-side), luego directo
+        const providersToTry = ['sofia', 'claude', 'groq', 'openrouter', 'gemini'];
         const errors: string[] = [];
         
         for (const provider of providersToTry) {
