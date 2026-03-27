@@ -24,10 +24,39 @@ class GeminiProvider implements AIProvider {
     }
 }
 
-// 3. Proveedores Futuros (Placeholder arquitectónico)
+// 3. Claude — Motor principal de Sofia
 class ClaudeProvider implements AIProvider {
+    private apiKey: string;
+    private model: string;
+
+    constructor(apiKey: string, model = 'claude-haiku-4-5-20251001') {
+        this.apiKey = apiKey;
+        this.model = model;
+    }
+
     async generateResponse(systemPrompt: string, userPrompt: string): Promise<string> {
-        throw new Error("Claude API no implementada todavía. (Preparado para el futuro)");
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'x-api-key': this.apiKey,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: this.model,
+                max_tokens: 1024,
+                system: systemPrompt,
+                messages: [{ role: 'user', content: userPrompt }],
+            }),
+        });
+
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(`Claude Error: ${(err as any)?.error?.message || response.statusText}`);
+        }
+
+        const data = await response.json() as { content: Array<{ text: string }> };
+        return data.content[0]?.text || '';
     }
 }
 
@@ -109,14 +138,18 @@ class OpenRouterProvider implements AIProvider {
 
 // Factoría de IA
 function getAIProvider(providerName: string): AIProvider {
+    const claudeKey = process.env.ANTHROPIC_API_KEY;
     const groqKey = process.env.GROQ_API_KEY;
     const openRouterKey = process.env.OPEN_ROUTER_API_KEY;
-    const geminiKey = process.env.GEMINI_API_KEY || 
+    const geminiKey = process.env.GEMINI_API_KEY ||
                      process.env.NEXT_PUBLIC_AI_API_KEY ||
                      process.env.GOOGLE_API_KEY ||
                      process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     switch (providerName.toLowerCase()) {
+        case 'claude':
+            if (!claudeKey) throw new Error("ANTHROPIC_API_KEY no configurada");
+            return new ClaudeProvider(claudeKey);
         case 'groq':
             if (!groqKey) throw new Error("API Key de Groq no configurada");
             return new GroqProvider(groqKey);
@@ -127,9 +160,55 @@ function getAIProvider(providerName: string): AIProvider {
             if (!geminiKey) throw new Error("API Key de Gemini no configurada");
             return new GeminiProvider(geminiKey);
         default:
-            // Este default lo manejamos en el loop de fallback del POST
+            if (claudeKey) return new ClaudeProvider(claudeKey);
             if (groqKey) return new GroqProvider(groqKey);
             throw new Error("No hay proveedores configurados");
+    }
+}
+
+// 4-bis. Contexto en tiempo real desde Sofia Backend (dashboard.serendipity.vn)
+async function getSofiaLiveContext(): Promise<string> {
+    const sofiaBase = process.env.SOFIA_API_URL || 'https://dashboard.serendipity.vn';
+    try {
+        const [prodRes, payablesRes] = await Promise.allSettled([
+            fetch(`${sofiaBase}/api/serendipity/production-summary`, { signal: AbortSignal.timeout(4000) }),
+            fetch(`${sofiaBase}/api/serendipity/payables`, { signal: AbortSignal.timeout(4000) }),
+        ]);
+
+        let ctx = '\n--- DATOS SOFIA EN TIEMPO REAL (Serendipity Binh Duong) ---\n';
+
+        if (prodRes.status === 'fulfilled' && prodRes.value.ok) {
+            const prod = (await prodRes.value.json() as any)?.data;
+            if (prod) {
+                ctx += `PRODUCCION MARZO 2026:\n`;
+                ctx += `- SF procesados: ${Number(prod.totalSqftMonth).toLocaleString('en')} SF / Meta: ${Number(prod.monthlyTarget).toLocaleString('en')} SF (${Number(prod.progressPct).toFixed(1)}%)\n`;
+                ctx += `- Ordenes: ${prod.orderCount}\n`;
+                if (prod.byClient) {
+                    const top = Object.entries(prod.byClient as Record<string, number>)
+                        .sort(([, a], [, b]) => b - a).slice(0, 3)
+                        .map(([k, v]) => `${k}: ${Number(v).toLocaleString('en')} SF`).join(' | ');
+                    ctx += `- Por cliente: ${top}\n`;
+                }
+            }
+        }
+
+        if (payablesRes.status === 'fulfilled' && payablesRes.value.ok) {
+            const raw = await payablesRes.value.json() as any;
+            const payables: any[] = Array.isArray(raw) ? raw : raw?.value ?? raw?.data ?? [];
+            const pending = payables.filter((p: any) => p.status !== 'paid');
+            if (pending.length > 0) {
+                const totalUsd = pending.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0);
+                ctx += `CUENTAS POR PAGAR PENDIENTES: ${pending.length} items — USD ${totalUsd.toLocaleString('en', { minimumFractionDigits: 2 })}\n`;
+                pending.slice(0, 5).forEach((p: any) => {
+                    ctx += `  - ${p.vendor || p.description}: USD ${Number(p.amount_usd || 0).toFixed(0)}\n`;
+                });
+            }
+        }
+
+        ctx += '--- FIN DATOS SOFIA ---\n';
+        return ctx;
+    } catch {
+        return '';
     }
 }
 
@@ -208,16 +287,20 @@ async function getVectorContext(query: string, supabase: any): Promise<string> {
 
 export async function POST(request: Request) {
     try {
-        const { query, context: quickContext, vaultContext } = await request.json();
+        const { query, context: quickContext } = await request.json();
 
         const supabase = await createClient();
 
-        // Extraer los datos "profundos" directamente desde el Backend (Supabase)
+        // Extraer contexto en paralelo: Sofia live data + Supabase + vector search
         let deepDatabaseContext = "";
         let vectorContext = "";
+        let sofiaLiveContext = "";
         try {
-            deepDatabaseContext = await getDatabaseContext();
-            vectorContext = await getVectorContext(query, supabase);
+            [deepDatabaseContext, vectorContext, sofiaLiveContext] = await Promise.all([
+                getDatabaseContext(),
+                getVectorContext(query, supabase),
+                getSofiaLiveContext(),
+            ]);
         } catch (dbError) {
             console.warn("No se pudo obtener el contexto profundo de la BD:", dbError);
         }
@@ -225,17 +308,19 @@ export async function POST(request: Request) {
         const systemPrompt = `
             ERES SOPHIA, la Macro-Agente de Inteligencia del Sistema Anthropos.
             Tu misión es orquestar la SIMETRÍA entre las Finanzas, la Operación y el Capital Humano.
-            
+
             ARQUITECTURA DE PENSAMIENTO: No trabajas sola. Actúas como el núcleo que coordina a tus Micro-Agentes:
             1. **Micro-Agente Financiero**: Te provee el estado de caja, deudas y climas.
             2. **Micro-Agente Operativo**: Monitorea estaciones, lotes y eficiencias en tiempo real.
             3. **Micro-Agente del Sagrario**: Custodia la memoria histórica y documentos legales/técnicos (RAG).
+            4. **Micro-Agente Sofia**: Datos en tiempo real desde la planta en Binh Duong (producción, pagos).
 
             FILOSOFÍA: Basas tus consejos en los 7 Principios Herméticos (Mentalismo, Correspondencia, Vibración, Polaridad, Ritmo, Causa/Efecto, Generación).
             TONO: Profesional, sabio, directo y ejecutivo. No eres un asistente servil, sino la guía estratégica del Líder.
 
             DATOS RECOPILADOS POR TUS MICRO-AGENTES PARA ESTA CONSULTA:
             ${quickContext}
+            ${sofiaLiveContext}
             ${deepDatabaseContext}
             ${vectorContext ? vectorContext : 'El Micro-Agente del Sagrario no encontró documentos relevantes para esta consulta específica.'}
 
@@ -244,14 +329,14 @@ export async function POST(request: Request) {
             - Si el usuario te pide un **INFORME**, **REPORTE** o **STATUS**, genera una estructura clara con Secciones, Métricas Clave y Recomendaciones.
             - Usa la información de la DB y del Sagrario de forma NATIVA. No digas "según el texto...".
             - Relaciona el impacto que una métrica en "Operaciones" puede tener en "Finanzas" usando la correspondencia hermética.
-            
+
             MONITOREO PROACTIVO: Cuando detectes anomalías en los lotes o gastos excesivos informados por tus micro-agentes, menciónalo proactivamente y da una recomendación basada en la Simetría.
 
             RESPUESTA SIEMPRE EN ESPAÑOL. Usa negritas para resaltar métricas y cifras clave.
         `;
 
-        // ESTRATEGIA DE FALLBACK EN CASCADA (Resiliencia Total)
-        const providersToTry = ['groq', 'openrouter', 'gemini'];
+        // ESTRATEGIA DE FALLBACK EN CASCADA — Claude primero (motor de Sofia)
+        const providersToTry = ['claude', 'groq', 'openrouter', 'gemini'];
         const errors: string[] = [];
         
         for (const provider of providersToTry) {
