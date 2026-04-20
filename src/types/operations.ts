@@ -46,4 +46,9 @@ export interface OperationSummary {
     activeOrders: number;
     completedToday: number;
     averageCycleTime: string;
+    molecularMetadata?: {
+        dailyVelocity?: number;
+        riskLabel?: string;
+        healthLabel?: string;
+    };
 }

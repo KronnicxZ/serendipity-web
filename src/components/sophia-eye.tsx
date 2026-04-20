@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { QrCode, X, Zap, Shield, Info, Camera, Scan, Activity, CheckCircle2, Flare, Lightbulb, Box, RefreshCw } from 'lucide-react'
+import { QrCode, X, Zap, Shield, Info, Camera, Scan, Activity, CheckCircle2, Sparkles, Lightbulb, Box, RefreshCw } from 'lucide-react'
 import { Button } from './ui-library'
 import { cn } from '@/lib/utils'
 
