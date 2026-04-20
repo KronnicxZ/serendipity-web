@@ -10,13 +10,26 @@ export const DashboardService = {
         const supabase = createClient();
         if (!supabase) throw new Error('Supabase client not available');
 
-        // Fetch basic summaries from connected services
+        // UNIFICACIÓN: Intentamos obtener la "Verdad Molecular" de Santiago primero
+        let molecularData: any = null;
+        try {
+            const molRes = await fetch('/api/local/production');
+            if (molRes.ok) {
+                molecularData = await molRes.json();
+            }
+        } catch (err) {
+            console.warn("No se pudo obtener data molecular para el Dashboard:", err);
+        }
+
+        // Fetch basic summaries from connected services (Fallback/Complemento)
         const [financeSummary, operationsSummary] = await Promise.all([
             FinanceService.getSummary(),
             OperationsService.getSummary()
         ]);
 
-        // Get transactions for the past 30 days or the given range for metrics
+        const s = molecularData?.summary || {};
+
+        // Get transactions for metrics (Chart)
         const endDate = dateRange?.to || new Date();
         const startDate = dateRange?.from || subDays(endDate, 30);
         
@@ -26,32 +39,23 @@ export const DashboardService = {
             .gte('date', startOfDay(startDate).toISOString())
             .lte('date', endDate.toISOString());
 
-        // Group by day for the chart
         const metricsMap = new Map<string, MetricDay>();
         let current = new Date(startDate);
         while (current <= endDate) {
             const dateStr = format(current, 'yyyy-MM-dd');
             metricsMap.set(dateStr, {
-                date: dateStr,
-                revenue: 0,
-                expenses: 0,
-                profit: 0,
-                transactions: 0
+                date: dateStr, revenue: 0, expenses: 0, profit: 0, transactions: 0
             });
             current.setDate(current.getDate() + 1);
         }
 
-        // Fill chart data with transactions
         (txs || []).forEach(tx => {
             const dateStr = Array.from(metricsMap.keys()).find(k => tx.date.startsWith(k)) || tx.date.split('T')[0];
             const amount = Number(tx.amount);
             if (metricsMap.has(dateStr)) {
                 const day = metricsMap.get(dateStr)!;
-                if (tx.type === 'INCOME') {
-                    day.revenue += amount;
-                } else if (tx.type === 'EXPENSE') {
-                    day.expenses += amount;
-                }
+                if (tx.type === 'INCOME') day.revenue += amount;
+                else if (tx.type === 'EXPENSE') day.expenses += amount;
                 day.profit = day.revenue - day.expenses;
                 day.transactions += 1;
             }
@@ -59,54 +63,41 @@ export const DashboardService = {
 
         const metricsArray = Array.from(metricsMap.values());
 
-        // Determine trend from finance climate
-        let season: FinancialTrend['season'] = 'cosecha';
-        let liquidityLevel: FinancialTrend['liquidityLevel'] = 'alta';
-        let status: FinancialTrend['status'] = 'estable';
-
-        if (financeSummary.climate.season === 'TORMENTA') {
-            season = 'tormenta';
-            status = 'bajando';
-            liquidityLevel = 'critica';
-        } else if (financeSummary.climate.season === 'SIEMBRA') {
-            season = 'siembra';
-            liquidityLevel = 'media';
-        }
-
+        // Mapeo selectivo de la arquitectura de Santiago al Dashboard
         return {
             stats: {
-                totalRevenue: financeSummary.monthlyRevenue,
-                totalExpenses: financeSummary.monthlyExpenses,
+                totalRevenue: s.totalSf ? s.totalSf * 0.85 : financeSummary.monthlyRevenue, // Precio base SF aprox
+                totalExpenses: s.pendingPayablesUsd || financeSummary.monthlyExpenses,
                 totalProfit: financeSummary.netProfit,
-                profitMargin: financeSummary.profitMargin,
-                totalCustomers: operationsSummary.activeOrders, // Usado como proxy operativo
-                errorRate: 1.2, 
-                onTimeDeliveryRate: 98.2 
+                profitMargin: s.grossMarginPct || financeSummary.profitMargin,
+                totalCustomers: Object.keys(s.byClient || {}).length || operationsSummary.activeOrders,
+                errorRate: s.riskScore || 1.2,
+                onTimeDeliveryRate: s.progressPct || 98.2 
             },
             metrics: metricsArray,
             trend: {
-                status,
-                liquidityLevel,
-                season,
-                messageOfTheDay: financeSummary.climate.message || 'Sistema operando en parámetros óptimos.'
+                status: s.riskLabel === 'low' ? 'estable' : 'bajando',
+                liquidityLevel: s.healthLabel === 'excellent' ? 'alta' : 'media',
+                season: (s.pulseLabel as any) || 'cosecha',
+                messageOfTheDay: molecularData ? `Velocidad actual: ${s.dailyVelocity} SF/día. Proyectado mes: ${s.projectedMonth} SF.` : 'Sistema operando en parámetros de respaldo.'
             },
             recommendations: [
                 {
                     priority: 1,
-                    title: "Revisión de Flujo",
-                    timeline: "URGENTE",
-                    description: "Analizar el margen de beneficio respecto a los gastos operativos recientes.",
-                    impact: "Optimización de costos en un 15%",
-                    ethicalAlignment: "Responsabilidad financiera compartida",
-                    actions: ["Analizar últimos gastos", "Definir presupuesto de área"]
+                    title: "Ajuste de Carga de Planta",
+                    timeline: "PRÓXIMOS 3 DÍAS",
+                    description: `Según el riesgo de ${s.riskLabel}, se recomienda optimizar la estación de QC.`,
+                    impact: "Mejora de flujo en un 12%",
+                    ethicalAlignment: "Eficiencia consciente",
+                    actions: ["Revisar cuellos de botella", "Asignar soporte a QC"]
                 }
             ],
-            alerts: financeSummary.totalBalance < 5000 ? [
+            alerts: s.riskScore > 7 ? [
                 {
                     severity: "CRITICAL",
-                    category: "Liquidez",
-                    message: "El balance actual es inferior a los parámetros de seguridad.",
-                    recommendation: "Revisar ingresos pendientes y pausar gastos no esenciales.",
+                    category: "Operaciones",
+                    message: "Riesgo operativo elevado detectado por Sofia.",
+                    recommendation: "Revisar logs de estaciones inmediatamente.",
                 }
             ] : [],
             team: []

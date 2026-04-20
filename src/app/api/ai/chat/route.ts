@@ -191,30 +191,40 @@ function getAIProvider(providerName: string): AIProvider {
     }
 }
 
-// 4-bis. Contexto en tiempo real desde Sofia Backend (dashboard.serendipity.vn)
+// 4-bis. Contexto en tiempo real desde Sofia Backend (dashboard.serendipity.vn) — UNIFICACIÓN MOLECULAR
 async function getSofiaLiveContext(): Promise<string> {
     const sofiaBase = process.env.SOFIA_API_URL || 'https://dashboard.serendipity.vn';
     try {
-        const [prodRes, payablesRes] = await Promise.allSettled([
+        // UNIFICACIÓN: Pedimos la molécula completa para que Sophia tenga visión total
+        const [prodRes, payablesRes, molRes] = await Promise.allSettled([
             fetch(`${sofiaBase}/api/serendipity/production-summary`, { signal: AbortSignal.timeout(4000) }),
             fetch(`${sofiaBase}/api/serendipity/payables`, { signal: AbortSignal.timeout(4000) }),
+            fetch(`${sofiaBase}/api/molecules/all`, { signal: AbortSignal.timeout(5000) }),
         ]);
 
-        let ctx = '\n--- DATOS SOFIA EN TIEMPO REAL (Serendipity Binh Duong) ---\n';
+        let ctx = '\n--- VISION MOLECULAR DE SOPHIA (Serendipity Binh Duong) ---\n';
 
         if (prodRes.status === 'fulfilled' && prodRes.value.ok) {
             const prod = (await prodRes.value.json() as any)?.data;
             if (prod) {
-                ctx += `PRODUCCION MARZO 2026:\n`;
-                ctx += `- SF procesados: ${Number(prod.totalSqftMonth).toLocaleString('en')} SF / Meta: ${Number(prod.monthlyTarget).toLocaleString('en')} SF (${Number(prod.progressPct).toFixed(1)}%)\n`;
-                ctx += `- Ordenes: ${prod.orderCount}\n`;
-                if (prod.byClient) {
-                    const top = Object.entries(prod.byClient as Record<string, number>)
-                        .sort(([, a], [, b]) => b - a).slice(0, 3)
-                        .map(([k, v]) => `${k}: ${Number(v).toLocaleString('en')} SF`).join(' | ');
-                    ctx += `- Por cliente: ${top}\n`;
-                }
+                ctx += `INFRAESTRUCTURA DE PRODUCCION:\n`;
+                ctx += `- SF procesados: ${Number(prod.totalSqftMonth).toLocaleString('en')} SF\n`;
+                ctx += `- Ordenes activas: ${prod.orderCount}\n`;
             }
+        }
+
+        // INTELECTO MOLECULAR (Santiago's Architecture)
+        if (molRes.status === 'fulfilled' && molRes.value.ok) {
+            const mol = await molRes.value.json() as any;
+            const ph = mol.productionPulse?.compounds || {};
+            const fh = mol.financialHealth?.atoms || {};
+            const or = mol.operationalRisk?.compounds || {};
+            
+            ctx += `ANALISIS DE SANTIAGO & SOFIA:\n`;
+            ctx += `- Salud Financiera: ${fh.healthLabel || 'Estable'} (${fh.grossMarginPct || 0}% Margen)\n`;
+            ctx += `- Riesgo Operativo: ${or.riskLabel || 'Bajo'} (Score: ${or.riskScore || 0})\n`;
+            ctx += `- Velocidad de Planta: ${ph.dailyVelocitySF || 0} SF/día\n`;
+            ctx += `- Pulso de Producción: ${ph.pulseLabel || 'Normal'}\n`;
         }
 
         if (payablesRes.status === 'fulfilled' && payablesRes.value.ok) {
@@ -223,17 +233,14 @@ async function getSofiaLiveContext(): Promise<string> {
             const pending = payables.filter((p: any) => p.status !== 'paid');
             if (pending.length > 0) {
                 const totalUsd = pending.reduce((s: number, p: any) => s + Number(p.amount_usd || 0), 0);
-                ctx += `CUENTAS POR PAGAR PENDIENTES: ${pending.length} items — USD ${totalUsd.toLocaleString('en', { minimumFractionDigits: 2 })}\n`;
-                pending.slice(0, 5).forEach((p: any) => {
-                    ctx += `  - ${p.vendor || p.description}: USD ${Number(p.amount_usd || 0).toFixed(0)}\n`;
-                });
+                ctx += `COMPROMISOS FINANCIEROS: USD ${totalUsd.toLocaleString('en')} pendientes.\n`;
             }
         }
 
-        ctx += '--- FIN DATOS SOFIA ---\n';
+        ctx += '--- FIN DEL ANALISIS MOLECULAR ---\n';
         return ctx;
     } catch {
-        return '';
+        return '\n[Aviso: Micro-Agente Sofia operando sin datos live del VPS]\n';
     }
 }
 

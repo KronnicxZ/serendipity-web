@@ -1,6 +1,6 @@
 # 📊 Checklist de Estado - Serendipity Anthropos OS
 
-**Fecha de Evaluación:** 12 de Marzo de 2026  
+**Fecha de Evaluación:** 27 de Marzo de 2026  
 **Proyecto:** Serendipity Anthropos OS  
 **Estado General:** 🚀 **Lanzamiento Completado / Puesta en Producción**
 
@@ -27,6 +27,7 @@
 - [x] **Landing Page Premium:** Diseño cinematográfico con efecto *Glassmorphism* y gradientes dinámicos.
 - [x] **Navegación Fluida (Lenis):** Implementación de *Smooth Scroll* inercial de alta gama optimizado para GPU.
 - [x] **Acceso Multi-Rol:** Sección de configuración ("El Templo") accesible ahora para roles SUPERVISOR y ADMIN.
+- [x] **Refinamiento UI Landing:** Header blanco puro (`bg-white/95`) en modo claro para máxima legibilidad y estética profesional.
 
 ### 🚧 Pendiente / En Mejora
 - [x] **Optimización de Carga de Mensajes:** Implementación de *infinite scroll* y paginación para chats con historiales extensos, manteniendo un rendimiento fluido.
@@ -49,7 +50,19 @@
 
 ---
 
+## 📡 INFRAESTRUCTURA Y COMUNICACIÓN (SMTP/EMAILS)
+
+### ✅ Completado (HECHO)
+- [x] **Configuración Resend + Supabase:** Integración completa de SMTP para correos transaccionales reales (Registro, Recuperación, MFA).
+- [x] **Dominio Verificado:** Autenticación de dominio `serendipity.vn` con registros SPF, DKIM y MX activos en Cloudflare.
+- [x] **Subdominios de Aplicación:** Separación robusta de entornos (`serendipity.vn` para landing y `app.serendipity.vn` para el dashboard interno).
+- [x] **Emails Transaccionales Reales:** Eliminación de *mockups* y `setTimeout` en la recuperación de contraseñas; ahora el flujo es síncrono con la API de Supabase.
+- [x] **Control de Remitente:** Identidad corporativa unificada usando `noreply@serendipity.vn` para todas las comunicaciones automáticas.
+- [x] **Seguridad de Redirección:** Configuración de `Redirect URLs` en Supabase para proteger y forzar el regreso de los usuarios a `app.serendipity.vn`.
+
+---
+
 ## 💡 Próximos Pasos (Opcionales)
-1. 🛠️ **Monitoreo de Seguridad:** Supervisar los intentos de login y el uso de las 2FA en producción.
+1. 🛠️ **Monitoreo de Entregabilidad:** Revisar en Resend si algún correo de confirmación es marcado como rebote (*bounce*).
 2. 📱 **QA de Chat:** Verificar la disposición de las burbujas de mensaje en pantallas ultra-pequeñas.
 3. 🔒 **Expansión de Auditoría:** Añadir más eventos críticos (cambios en settings financieros) al log de auditoría.
