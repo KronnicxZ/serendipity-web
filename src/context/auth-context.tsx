@@ -35,39 +35,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const supabase = createClient()
 
     useEffect(() => {
+        // Inicialización: intentamos recuperar usuario de localStorage si no hay session de Supabase
+        const savedUser = localStorage.getItem('anthropos_user');
+        if (savedUser) {
+            setUser(JSON.parse(savedUser));
+        }
+
         if (!supabase) {
             setLoading(false)
             return
         }
 
-        // Get initial session
+        // Mantenemos Supabase para compatibilidad si hay sesión activa
         supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
             setSession(currentSession)
-            if (currentSession?.user) {
+            if (currentSession?.user && !savedUser) {
                 const metadata = currentSession.user.user_metadata
-                setUser({
+                const u: User = {
                     id: currentSession.user.id,
                     email: currentSession.user.email || '',
                     name: metadata.name || currentSession.user.email?.split('@')[0] || 'User',
                     role: (metadata.role as UserRole) || 'OPERATIVO',
-                })
+                }
+                setUser(u);
+                localStorage.setItem('anthropos_user', JSON.stringify(u));
             }
             setLoading(false)
         })
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession)
             if (newSession?.user) {
                 const metadata = newSession.user.user_metadata
-                setUser({
+                const u: User = {
                     id: newSession.user.id,
                     email: newSession.user.email || '',
                     name: metadata.name || newSession.user.email?.split('@')[0] || 'User',
                     role: (metadata.role as UserRole) || 'OPERATIVO',
-                })
-            } else {
-                setUser(null)
+                }
+                setUser(u);
+                localStorage.setItem('anthropos_user', JSON.stringify(u));
+            } else if (!_event.includes('SIGNED_IN')) {
+                // Solo limpiamos si no hay un usuario local (de PG)
+                if (!localStorage.getItem('anthropos_user')) {
+                    setUser(null)
+                }
             }
             setLoading(false)
         })
@@ -76,74 +88,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [supabase])
 
     const login = async (email: string, password: string) => {
-        if (!supabase) throw new Error('Supabase Client not initialized')
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
 
-        const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password
-        })
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Fallo en la autenticación');
 
-        if (error) throw error
+        const u: User = {
+            id: data.user.id.toString(),
+            email: data.user.email,
+            name: data.user.name,
+            role: data.user.role
+        };
+
+        setUser(u);
+        localStorage.setItem('anthropos_user', JSON.stringify(u));
     }
 
     const loginWithOtp = async (email: string, otp: string) => {
+        // Implementación pendiente para PG si es necesario
         if (!supabase) throw new Error('Supabase Client not initialized')
-
-        const { error } = await supabase.auth.verifyOtp({
-            email,
-            token: otp,
-            type: 'magiclink'
-        })
-
+        const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: 'magiclink' })
         if (error) throw error
     }
 
     const register = async (email: string, password: string, name: string, role: UserRole) => {
-        if (!supabase) throw new Error('Supabase Client not initialized')
+        const response = await fetch('/api/admin/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password, name, role })
+        });
 
-        // Always use the production URL for email redirects.
-        const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.serendipity.vn'
-        const { error } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-                emailRedirectTo: `${siteUrl}/login`,
-                data: {
-                    name,
-                    role
-                }
-            }
-        })
-
-        if (error) throw error
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error en el registro');
     }
 
     const resetPassword = async (email: string) => {
         if (!supabase) throw new Error('Supabase Client not initialized')
-
         const siteUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://app.serendipity.vn'
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
             redirectTo: `${siteUrl}/login/reset-password`
         })
-
         if (error) throw error
     }
 
     const updatePassword = async (password: string) => {
         if (!supabase) throw new Error('Supabase Client not initialized')
-
-        const { error } = await supabase.auth.updateUser({
-            password
-        })
-
+        const { error } = await supabase.auth.updateUser({ password })
         if (error) throw error
     }
 
     const logout = async () => {
-        if (!supabase) return
-        await supabase.auth.signOut()
-        
-        // Force a hard reload to clear any remaining cache and state
+        if (supabase) await supabase.auth.signOut()
+        localStorage.removeItem('anthropos_user');
+        setUser(null);
         window.location.href = '/login'
     }
 

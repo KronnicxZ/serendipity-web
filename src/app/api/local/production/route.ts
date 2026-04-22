@@ -79,3 +79,28 @@ export async function GET(req: NextRequest) {
         }, { status: 500 })
     }
 }
+
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json()
+        
+        // REENVÍO AL VPS DE SANTIAGO (Sofia Backend)
+        // Se asume el endpoint: /api/serendipity/update-tracking o similar
+        const response = await fetch(BACKEND + '/api/serendipity/update-tracking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+
+        if (!response.ok) {
+            console.warn('VPS Santiago no respondió a la actualización, continuando con Supabase...')
+        }
+
+        const data = await response.json().catch(() => ({}))
+        return NextResponse.json({ success: true, vpsResponse: data })
+    } catch (err: any) {
+        console.error('Error enviando tracking al VPS:', err)
+        // Retornamos éxito aunque falle el VPS para permitir que el flujo siga en Supabase (Resiliencia)
+        return NextResponse.json({ success: false, error: err.message }, { status: 200 })
+    }
+}

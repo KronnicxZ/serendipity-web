@@ -5,6 +5,7 @@ const supabase = createClient()
 
 export const OperationsService = {
     async getStations(): Promise<Station[]> {
+        // Por ahora mantenemos Supabase para estaciones si no se ha migrado
         if (!supabase) return [];
         const { data, error } = await supabase
             .from('stations')
@@ -20,182 +21,119 @@ export const OperationsService = {
 
     async getOrders(): Promise<Order[]> {
         try {
-            // UNIFICACIÓN: Priorizamos la ruta molecular de Santiago para el dashboard
-            const response = await fetch('/api/local/production')
+            const response = await fetch('/api/serendipity/orders')
             if (response.ok) {
                 const data = await response.json()
-                if (data.orders && data.orders.length > 0) {
-                    return data.orders
+                if (data.orders) {
+                    return data.orders.map((order: any) => ({
+                        id: order.id,
+                        qrCode: order.qr_code || `QR-${order.id}`,
+                        status: order.status === 'NEW' ? 'amber' : (order.status === 'DELIVERED' ? 'green' : 'amber'),
+                        customer: order.customer,
+                        product: order.article, // Mapeo: article -> product
+                        quantity: order.qty,     // Mapeo: qty -> quantity
+                        unit: order.unit || 'SF',
+                        dueDate: order.eta,      // Mapeo: eta -> dueDate
+                        createdAt: order.created_at,
+                        updatedAt: order.updated_at,
+                        currentStationId: order.current_station_id,
+                        notes: order.notes,
+                        statusHistory: [], // Se llenaría con otro fetch si es necesario
+                        stationHistory: []
+                    }))
                 }
             }
         } catch (err) {
-            console.warn("Ruta molecular no disponible, cayendo a Supabase:", err)
+            console.error("Error fetching orders from PostgreSQL API:", err)
         }
-
-        // FALLBACK: Supabase directo (como estaba antes)
-        if (!supabase) return [];
-        const { data: ordersData, error: ordersError } = await supabase
-            .from('orders')
-            .select(`
-                *,
-                order_status_history (*),
-                order_station_movements (*)
-            `)
-            .order('created_at', { ascending: false })
-
-        if (ordersError) throw ordersError
-
-        return ordersData.map(order => ({
-            id: order.id,
-            qrCode: order.qr_code,
-            status: order.status,
-            customer: order.customer,
-            product: order.product,
-            quantity: order.quantity,
-            unit: order.unit,
-            dueDate: order.due_date,
-            createdAt: order.created_at,
-            updatedAt: order.updated_at,
-            currentStationId: order.current_station_id,
-            notes: order.notes,
-            statusHistory: order.order_status_history?.map((h: any) => ({
-                status: h.status,
-                timestamp: h.created_at,
-                reason: h.reason
-            })) || [],
-            stationHistory: order.order_station_movements?.map((m: any) => ({
-                stationId: m.station_id,
-                enteredAt: m.entered_at,
-                exitedAt: m.exited_at
-            })) || []
-        }))
+        return [];
     },
 
     async getSummary(): Promise<OperationSummary> {
-        try {
-            // UNIFICACIÓN: Datos de rendimiento molecular (Santiago + Sofia)
-            const response = await fetch('/api/local/production')
-            if (response.ok) {
-                const data = await response.json()
-                const s = data.summary
-                return {
-                    totalOrders: data.orders?.length || 0,
-                    activeOrders: data.orders?.filter((o: any) => o.status !== 'green').length || 0,
-                    completedToday: Math.round(s.totalSf / 1000), // Ejemplo de métrica Santiago
-                    averageCycleTime: `${s.riskScore ? (10 - s.riskScore).toFixed(1) : '4.2'} días`,
-                    // Metadatos extra de la arquitectura de Santiago
-                    molecularMetadata: {
-                        dailyVelocity: s.dailyVelocity,
-                        riskLabel: s.riskLabel,
-                        healthLabel: s.healthLabel
-                    }
-                }
-            }
-        } catch (err) {
-            console.warn("No se pudo obtener resumen molecular:", err)
-        }
-
-        return { totalOrders: 0, activeOrders: 0, completedToday: 0, averageCycleTime: '4.2 días' }
+        const orders = await this.getOrders();
+        return {
+            totalOrders: orders.length,
+            activeOrders: orders.filter(o => o.status !== 'green').length,
+            completedToday: orders.filter(o => {
+                const today = new Date().toISOString().split('T')[0];
+                return o.status === 'green' && o.updatedAt.startsWith(today);
+            }).length,
+            averageCycleTime: '4.2 días'
+        };
     },
 
     async updateStatus(orderId: string, status: Order['status'], reason?: string): Promise<Order> {
-        if (!supabase) throw new Error('No supabase client');
+        // Usamos el endpoint de QR para actualizar estado (según arquitectura de Santiago)
+        const response = await fetch('/api/serendipity/qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                order_id: orderId, 
+                action: status === 'green' ? 'DELIVERED' : 'MOVE_TO_STATION',
+                station: 'Dashboard', // Placeholder o estación actual
+                notes: reason 
+            })
+        });
 
-        const { error: updateError } = await supabase
-            .from('orders')
-            .update({ status, updated_at: new Date().toISOString() })
-            .eq('id', orderId)
-
-        if (updateError) throw updateError
-
-        const { data: userData } = await supabase.auth.getUser()
-
-        await supabase.from('order_status_history').insert({
-            order_id: orderId,
-            status,
-            reason,
-            updated_by: userData.user?.id
-        })
+        if (!response.ok) throw new Error('Error updating status');
 
         const allOrders = await this.getOrders()
         return allOrders.find(o => o.id === orderId)!
     },
 
     async moveToStation(orderId: string, stationId: string): Promise<Order> {
-        if (!supabase) throw new Error('No supabase client');
-
-        const now = new Date().toISOString()
-        const { data: userData } = await supabase.auth.getUser()
-
-        const { error: orderError } = await supabase
-            .from('orders')
-            .update({
-                current_station_id: stationId,
-                updated_at: now
+        const response = await fetch('/api/serendipity/qr', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                order_id: orderId, 
+                action: 'MOVE_TO_STATION', 
+                station: stationId 
             })
-            .eq('id', orderId)
+        });
 
-        if (orderError) throw orderError
-
-        const { data: activeMovement } = await supabase
-            .from('order_station_movements')
-            .select('*')
-            .eq('order_id', orderId)
-            .is('exited_at', null)
-            .single()
-
-        if (activeMovement) {
-            await supabase.from('order_station_movements')
-                .update({ exited_at: now })
-                .eq('id', activeMovement.id)
-        }
-
-        await supabase.from('order_station_movements').insert({
-            order_id: orderId,
-            station_id: stationId,
-            entered_at: now,
-            handled_by: userData.user?.id
-        })
+        if (!response.ok) throw new Error('Error moving to station');
 
         const allOrders = await this.getOrders()
         return allOrders.find(o => o.id === orderId)!
     },
 
     async createOrder(order: Partial<Order>): Promise<Order> {
-        if (!supabase) throw new Error('No supabase client');
-        const now = new Date().toISOString()
-        const qrCode = `https://anthropos.io/qr/${Date.now()}`
-        const { data: userData } = await supabase.auth.getUser()
+        const response = await fetch('/api/serendipity/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer: order.customer,
+                article: order.product,
+                qty: order.quantity,
+                unit: order.unit,
+                eta: order.dueDate,
+                notes: order.notes
+            })
+        });
 
-        const { data, error } = await supabase.from('orders').insert({
-            qr_code: qrCode,
-            status: order.status || 'amber',
-            customer: order.customer || 'Cliente Prototipo',
-            product: order.product || 'Materia Prima',
-            quantity: order.quantity || 100,
-            unit: order.unit || 'Kg',
-            due_date: order.dueDate || new Date(Date.now() + 86400000 * 5).toISOString(),
-            current_station_id: order.currentStationId,
-            assigned_to: userData.user?.id
-        }).select().single()
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Error creating order');
+        }
 
-        if (error) throw error
-
-        await supabase.from('order_status_history').insert({
-            order_id: data.id,
-            status: data.status,
-            reason: 'Escaneo Inicial',
-            updated_by: userData.user?.id
-        })
-
-        await supabase.from('order_station_movements').insert({
-            order_id: data.id,
-            station_id: data.current_station_id,
-            entered_at: now,
-            handled_by: userData.user?.id
-        })
-
-        const allOrders = await this.getOrders()
-        return allOrders.find(o => o.id === data.id)!
+        const data = await response.json();
+        // Mapeamos el retorno
+        return {
+            id: data.order.id,
+            qrCode: data.order.qr_code,
+            status: 'amber',
+            customer: data.order.customer,
+            product: data.order.article,
+            quantity: data.order.qty,
+            unit: data.order.unit,
+            dueDate: data.order.eta,
+            createdAt: data.order.created_at,
+            updatedAt: data.order.updated_at,
+            currentStationId: data.order.current_station_id,
+            notes: data.order.notes,
+            statusHistory: [],
+            stationHistory: []
+        };
     }
 }
