@@ -1,85 +1,50 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+// Migrated from Supabase → local PostgreSQL
+import { NextRequest, NextResponse } from 'next/server';
+import { pool } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-// Usar el cliente Admin con Service Role para saltarse RLS y gestionar Auth
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
+export async function GET() {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, email, name, role, created_at FROM "GoogleUsers" ORDER BY created_at DESC`
+    );
+    return NextResponse.json({ users: rows });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
-});
-
-export async function POST(request: Request) {
-    try {
-        const { email, password, name, role } = await request.json();
-
-        if (!email || !password || !name) {
-            return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
-        }
-
-        // 1. Crear el usuario en auth.users
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-            email,
-            password,
-            email_confirm: true,
-            user_metadata: { name, role: role || 'OPERATIVO' }
-        });
-
-        if (authError) {
-            console.error('Error Auth Admin:', authError);
-            return NextResponse.json({ error: authError.message }, { status: 500 });
-        }
-
-        const user = authData.user;
-
-        // 2. Crear el registro en public.users
-        const { error: publicError } = await supabaseAdmin
-            .from('users')
-            .insert({
-                id: user.id,
-                email,
-                name,
-                role: role || 'OPERATIVO'
-            });
-
-        if (publicError) {
-            console.error('Error Public User:', publicError);
-            // Si falla el insert público, borramos el de auth para mantener integridad
-            await supabaseAdmin.auth.admin.deleteUser(user.id);
-            return NextResponse.json({ error: publicError.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, user: authData.user });
-
-    } catch (error: any) {
-        console.error('Admin User API Error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
 }
 
-export async function DELETE(request: Request) {
-    try {
-        const { searchParams } = new URL(request.url);
-        const userId = searchParams.get('id');
+export async function POST(req: NextRequest) {
+  try {
+    const { email, password, name, role = 'OPERATIVO' } = await req.json();
+    if (!email || !password || !name)
+      return NextResponse.json({ error: 'Faltan campos: email, password, name' }, { status: 400 });
 
-        if (!userId) {
-            return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
-        }
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query(
+      `INSERT INTO "GoogleUsers" (email, password_hash, name, role, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (email) DO NOTHING
+       RETURNING id, email, name, role, created_at`,
+      [email, hash, name, role]
+    );
+    if (!rows.length)
+      return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 });
 
-        // Borrar el usuario de Auth (y por cascade o manual del public si no hay cascade)
-        // Ya que public.users.id references auth.users.id, el borrado de auth es lo principal
-        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    return NextResponse.json({ success: true, user: rows[0] }, { status: 201 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
 
-        if (deleteError) {
-            return NextResponse.json({ error: deleteError.message }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true });
-
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('id');
+    if (!userId) return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
+    await pool.query(`DELETE FROM "GoogleUsers" WHERE id = $1`, [userId]);
+    return NextResponse.json({ success: true });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
 }
