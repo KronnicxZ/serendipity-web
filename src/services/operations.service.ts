@@ -135,5 +135,14 @@ export const OperationsService = {
             statusHistory: [],
             stationHistory: []
         };
+    },
+
+    async syncFromSheets(): Promise<{ message: string; data: any[] }> {
+        const response = await fetch('/api/serendipity/sheets/sync');
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'Error sincronizando con Google Sheets');
+        }
+        return response.json();
     }
 }

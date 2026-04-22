@@ -42,4 +42,17 @@
 
 ---
 
-*“El sistema está ahora en modo hibernación productiva, esperando el despertar de las nuevas tablas en el servidor de Santiago.”*
+## 📂 Centralización de Datos (Google Drive)
+Se ha establecido la arquitectura de carpetas para la operación:
+- **Carpeta Raíz**: [Serendipity Operation](https://drive.google.com/drive/folders/1Sl5qHb19RqVcfJWiTvLJV9-XzyMSlMLk)
+- **Seguimiento de Órdenes**: [Orders Live Tracker](https://docs.google.com/spreadsheets/d/15t8d5Crgdgbh-qld6-hVCXTUqPuVSPThiisJm4KXON0/edit)
+- **Inspección y Logística**: [Inspection & Delivery Log](https://docs.google.com/spreadsheets/d/1olnvJ8DMtdUkbUvT5U-D3PevjsfAY1UfO_FnjYkFewE/edit)
+
+## 🚀 Próximos Pasos (Fase 2)
+1. **Conector Google Sheets**: Desarrollar la integración con Google Sheets API para sincronizar bidireccionalmente los pedidos.
+2. **Migración de Servicios Restantes**: Mover `Finance` y `Messaging` a la estructura de PostgreSQL local.
+3. **Optimización de UI**: Ajustar los componentes del dashboard para reflejar métricas específicas provenientes de las hojas de cálculo.
+
+---
+*“El sistema ha pasado de hibernación a integración local PostgreSQL. Siguiente parada: Conectividad Sheets API.”*
+*Reporte actualizado automáticamente por Antigravity - 22 de Abril, 2026*
