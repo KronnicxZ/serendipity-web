@@ -2,7 +2,7 @@ import { DashboardData, MetricDay, FinancialTrend } from '@/types/dashboard'
 import { DateRange } from 'react-day-picker'
 import { isWithinInterval, parseISO, subDays, startOfDay, format } from 'date-fns'
 import { createClient } from '@/lib/supabase/client'
-import { FinanceService } from './finance.service'
+// import { FinanceService } from './finance.service'
 import { OperationsService } from './operations.service'
 
 export const DashboardService = {
@@ -22,10 +22,11 @@ export const DashboardService = {
         }
 
         // Fetch basic summaries from connected services (Fallback/Complemento)
-        const [financeSummary, operationsSummary] = await Promise.all([
-            FinanceService.getSummary(),
+        const [financeRes, operationsSummary] = await Promise.all([
+            fetch('/api/serendipity/finance').then(res => res.json()),
             OperationsService.getSummary()
         ]);
+        const financeSummary = financeRes;
 
         const s = molecularData?.summary || {};
 

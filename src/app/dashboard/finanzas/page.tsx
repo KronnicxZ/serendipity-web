@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 
 import { useFinance } from '@/hooks/use-finance'
 import { Card, Badge, Button, Skeleton } from '@/components/ui-library'
-import { ClimateIcon } from '@/types/finance'
+import { ClimateIcon, ExpenseCategory } from '@/types/finance'
 import { useTranslation } from '@/context/language-context'
 
 const ClimateIconMap = ({ icon, className }: { icon: ClimateIcon, className?: string }) => {
@@ -160,7 +160,7 @@ export default function FinanzasPage() {
                     <h4 className="font-semibold text-[var(--foreground)] text-lg tracking-tight">{t('finances.expenseStructure')}</h4>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {finData.expensesByCategory.map((exp) => (
+                    {finData.expensesByCategory.map((exp: ExpenseCategory) => (
                         <div key={exp.category} className="space-y-3 bg-[var(--background)] p-5 rounded-[20px] border border-[var(--border)]">
                             <div className="flex justify-between items-center text-[14px] font-semibold">
                                 <span className="text-[var(--foreground)]">{exp.category}</span>
