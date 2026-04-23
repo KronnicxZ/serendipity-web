@@ -5,8 +5,8 @@ import { google } from 'googleapis';
 // F: QTY | G: UNIT | H: STATUS | I: ETA | J: NOTES
 // K: CRUST_SUPPLIER | L: CRUST_COST | M: SELL_PRICE
 
-const ORDERS_SHEET_ID = '15t8d5Crgdgbh-qld6-hVCXTUqPuVSPThiisJm4KXON0';
-const ORDERS_RANGE    = 'Sheet1!A2:M200';
+const ORDERS_SHEET_ID = process.env.GOOGLE_ORDERS_SHEET_ID || '15t8d5Crgdgbh-qld6-hVCXTUqPuVSPThiisJm4KXON0';
+const ORDERS_RANGE    = 'BULK!A2:M200';
 
 function buildAuth() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
