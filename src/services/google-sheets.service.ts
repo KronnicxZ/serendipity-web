@@ -41,6 +41,35 @@ export interface SheetOrder {
   sell_price:      number | null;
 }
 
+// ── Chemical & Finishing sheet (Factory — Chemical & Finishing folder) ──
+const CHEM_SHEET_ID = process.env.GOOGLE_CHEM_SHEET_ID ?? '';
+
+function buildWriteAuth() {
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key   = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  if (!email || !key) throw new Error('Google Sheets credentials not configured');
+  return new google.auth.GoogleAuth({
+    credentials: { client_email: email, private_key: key },
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  });
+}
+
+export interface BatchExportRow {
+  batch_number: string;
+  po_number:    string;
+  formula_name: string;
+  sf_produced:  number;
+  owner:        string;
+  executed_by:  string;
+  chemical_name: string;
+  qty_prepared: number;
+  qty_used:     number;
+  waste_kg:     number;
+  waste_pct:    number;
+  is_anomaly:   boolean;
+  date:         string;
+}
+
 export class GoogleSheetsService {
   static async getSheetData(spreadsheetId: string, range: string): Promise<string[][]> {
     const auth   = buildAuth();
@@ -48,6 +77,55 @@ export class GoogleSheetsService {
 
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     return (response.data.values as string[][] | null) ?? [];
+  }
+
+  /** Append one row per chemical layer to the "Lotes" tab */
+  static async exportBatchToSheet(rows: BatchExportRow[]): Promise<void> {
+    if (!CHEM_SHEET_ID) return;
+    const auth   = buildWriteAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    const values = rows.map(r => [
+      r.date, r.owner, r.po_number, r.batch_number, r.formula_name,
+      r.sf_produced, r.executed_by, r.chemical_name,
+      r.qty_prepared, r.qty_used, r.waste_kg, r.waste_pct,
+      r.is_anomaly ? '⚠️ ANOMALÍA' : 'OK',
+    ]);
+
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: CHEM_SHEET_ID,
+      range: 'Lotes!A1',
+      valueInputOption: 'USER_ENTERED',
+      requestBody: { values },
+    });
+  }
+
+  /** Update status cell for a PO row in "Órdenes" tab */
+  static async updatePoStatus(poNumber: string, status: string, sfProduced: number): Promise<void> {
+    if (!CHEM_SHEET_ID) return;
+    const auth   = buildWriteAuth();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Find the row with this PO number
+    const existing = await sheets.spreadsheets.values.get({
+      spreadsheetId: CHEM_SHEET_ID,
+      range: 'Órdenes!A:A',
+    });
+    const rows = existing.data.values ?? [];
+    const rowIdx = rows.findIndex(r => r[0] === poNumber);
+    if (rowIdx === -1) return;
+
+    const row = rowIdx + 1;
+    await sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId: CHEM_SHEET_ID,
+      requestBody: {
+        valueInputOption: 'USER_ENTERED',
+        data: [
+          { range: `Órdenes!H${row}`, values: [[status]] },
+          { range: `Órdenes!F${row}`, values: [[sfProduced]] },
+        ],
+      },
+    });
   }
 
   static async getOrdersFromSheet(): Promise<SheetOrder[]> {
