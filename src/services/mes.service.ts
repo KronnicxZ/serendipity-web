@@ -10,12 +10,11 @@ export const MesService = {
     chemicals_ok: boolean;
     leather_ok:   boolean;
   }> {
-    // Load PO with formula and article
+    // Load PO with both formula FKs (legacy + new Lab)
     const { rows: [po] } = await pool.query(`
-      SELECT po.*, a.crust_type, a.name AS article_name, f.id AS fid
+      SELECT po.*, a.crust_type, a.name AS article_name
       FROM production_orders po
       LEFT JOIN articles a ON a.id = po.article_id
-      LEFT JOIN formulas  f ON f.id = po.formula_id
       WHERE po.id = $1
     `, [poId]);
 
@@ -24,14 +23,61 @@ export const MesService = {
     const shortages: ShortageItem[] = [];
 
     // ── 1. Check chemical requirements ──────────────────────
-    if (po.fid) {
+    if (po.recipe_formula_id) {
+      // NEW PATH: recipe_lines + recipe_processes.consumption_kg_per_sf
+      // sum_grams_proceso via window function — resistant to non-1000g bases
+      const { rows: lines } = await pool.query(`
+        SELECT
+          rl.chemical_id,
+          rl.grams,
+          rp.consumption_kg_per_sf,
+          rp.id AS process_id,
+          c.name,
+          c.stock_kg,
+          c.unit,
+          SUM(rl.grams) OVER (PARTITION BY rp.id) AS sum_grams_proceso
+        FROM recipe_lines rl
+        JOIN recipe_processes rp ON rp.id = rl.process_id
+        JOIN chemicals c ON c.id = rl.chemical_id
+        WHERE rp.formula_id = $1
+          AND rp.type = 'CHEMICAL'
+          AND rp.consumption_kg_per_sf IS NOT NULL
+          AND rl.chemical_id IS NOT NULL
+      `, [po.recipe_formula_id]);
+
+      // Consolidate kg needed across all processes per chemical
+      const chemMap = new Map<number, { name: string; stock_kg: number; unit: string; needed: number }>();
+      for (const line of lines) {
+        const proportion     = Number(line.grams) / Number(line.sum_grams_proceso);
+        const total_proc_kg  = Number(po.sf_target) * Number(line.consumption_kg_per_sf);
+        const kg_needed      = proportion * total_proc_kg;
+        const entry = chemMap.get(line.chemical_id);
+        if (entry) {
+          entry.needed += kg_needed;
+        } else {
+          chemMap.set(line.chemical_id, {
+            name:     line.name,
+            stock_kg: Number(line.stock_kg),
+            unit:     line.unit ?? 'kg',
+            needed:   kg_needed,
+          });
+        }
+      }
+      for (const chem of chemMap.values()) {
+        if (chem.needed > chem.stock_kg) {
+          shortages.push({ name: chem.name, type: 'CHEMICAL', needed: chem.needed, available: chem.stock_kg, unit: chem.unit });
+        }
+      }
+
+    } else if (po.formula_id) {
+      // LEGACY PATH: formula_layers.qty_per_sf — kept until Phase 5 executes
       const { rows: layers } = await pool.query(`
         SELECT fl.chemical_id, fl.qty_per_sf, c.name, c.stock_kg, c.unit
         FROM formula_layers fl
         JOIN chemicals c ON c.id = fl.chemical_id
         WHERE fl.formula_id = $1 AND fl.layer_type = 'CHEMICAL'
           AND fl.chemical_id IS NOT NULL AND fl.qty_per_sf IS NOT NULL
-      `, [po.fid]);
+      `, [po.formula_id]);
 
       for (const layer of layers) {
         const needed = Number(layer.qty_per_sf) * Number(po.sf_target);
@@ -40,8 +86,8 @@ export const MesService = {
           shortages.push({
             name:      layer.name,
             type:      'CHEMICAL',
-            needed:    needed,
-            available: available,
+            needed,
+            available,
             unit:      layer.unit ?? 'kg',
           });
         }

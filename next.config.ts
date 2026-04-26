@@ -4,7 +4,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  serverExternalPackages: ["pdf-parse"],
+  serverExternalPackages: ["pdf-parse", "nodemailer"],
+  // Turbopack has a CSS path resolution bug on Windows — use webpack
+  bundlePagesRouterDependencies: true,
 
   // Redirigir www → dominio raíz (bueno para SEO)
   async redirects() {
