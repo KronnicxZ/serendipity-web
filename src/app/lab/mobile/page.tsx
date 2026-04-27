@@ -309,37 +309,37 @@ export default function MobileLabPage() {
     // ── Components ──────────────────────────────────────────
 
     const Header = ({ title, showBack = false, onBack = () => setScreen('home') }: { title: string, showBack?: boolean, onBack?: () => void }) => (
-        <header className="fixed top-0 left-0 right-0 h-20 apple-blur border-b border-[var(--border)] z-[60] px-4 flex items-center justify-between transition-all duration-300">
-            <div className="flex items-center gap-3">
+        <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 apple-blur border-b border-[var(--border)] z-[60] px-3 sm:px-4 flex items-center justify-between transition-all duration-300">
+            <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
                 {showBack ? (
-                    <Button variant="ghost" size="icon" onClick={onBack} className="!rounded-full hover:bg-[var(--secondary)]">
-                        <ChevronLeft size={20} />
+                    <Button variant="ghost" size="icon" onClick={onBack} className="!rounded-full hover:bg-[var(--secondary)] w-8 h-8 sm:w-10 sm:h-10">
+                        <ChevronLeft size={18} />
                     </Button>
                 ) : (
-                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/30">
-                        <Activity size={20} strokeWidth={2.5} />
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/30 shrink-0">
+                        <Activity size={16} sm:size={20} strokeWidth={2.5} />
                     </div>
                 )}
-                <div className="flex flex-col">
-                    <h1 className="text-sm font-bold tracking-tight leading-none text-[var(--foreground)] font-outfit uppercase truncate max-w-[120px]">{title}</h1>
-                    <div className="flex items-center gap-1 mt-1">
+                <div className="flex flex-col min-w-0">
+                    <h1 className="text-[11px] sm:text-sm font-bold tracking-tight leading-none text-[var(--foreground)] font-outfit uppercase truncate">{title}</h1>
+                    <div className="hidden sm:flex items-center gap-1 mt-1">
                         <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                         <span className="text-[8px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest truncate">CONNECTED</span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Sync Button */}
-                <Button variant="ghost" size="icon" onClick={load} disabled={loading} className="!rounded-full border border-[var(--border)] bg-[var(--card)] w-9 h-9 shadow-sm">
-                    <RefreshCw size={16} className={cn(loading && "animate-spin text-blue-500")} />
+                <Button variant="ghost" size="icon" onClick={load} disabled={loading} className="!rounded-full border border-[var(--border)] bg-[var(--card)] w-8 h-8 sm:w-9 sm:h-9 shadow-sm shrink-0">
+                    <RefreshCw size={14} sm:size={16} className={cn(loading && "animate-spin text-blue-500")} />
                 </Button>
-
+...
                 {/* Owner Toggle */}
                 <button
                     onClick={() => setOwner(o => o === 'Serendipity' ? 'PRARA' : 'Serendipity')}
                     className={cn(
-                        "h-9 px-3 rounded-full text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95",
+                        "h-8 sm:h-9 px-2 sm:px-3 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border transition-all active:scale-95 shrink-0",
                         owner === 'Serendipity' 
                             ? "bg-blue-600/10 border-blue-500/30 text-blue-500" 
                             : "bg-orange-600/10 border-orange-500/30 text-orange-500"
@@ -349,12 +349,12 @@ export default function MobileLabPage() {
                 </button>
 
                 {/* Language Switcher */}
-                <div className="relative">
+                <div className="relative shrink-0">
                     <button
                         onClick={() => setIsLangOpen(!isLangOpen)}
-                        className="w-9 h-9 rounded-full border border-[var(--border)] bg-[var(--card)] flex items-center justify-center overflow-hidden shadow-sm active:scale-95 transition-all"
+                        className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[var(--border)] bg-[var(--card)] flex items-center justify-center overflow-hidden shadow-sm active:scale-95 transition-all"
                     >
-                        <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10">
+                        <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-white/10">
                             <currentLang.Flag />
                         </div>
                     </button>
@@ -394,15 +394,15 @@ export default function MobileLabPage() {
                     </AnimatePresence>
                 </div>
 
-                {/* Theme Toggle */}
-                <Button variant="ghost" size="icon" onClick={toggleTheme} className="!rounded-full border border-[var(--border)] bg-[var(--card)] w-9 h-9 shadow-sm">
+                {/* Theme Toggle - Hidden on very small mobile to save space */}
+                <Button variant="ghost" size="icon" onClick={toggleTheme} className="hidden sm:flex !rounded-full border border-[var(--border)] bg-[var(--card)] w-9 h-9 shadow-sm shrink-0">
                     {isDarkMode ? <Sun size={16} className="text-blue-500" /> : <Moon size={16} />}
                 </Button>
 
                 {/* User Avatar */}
                 <button 
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="w-9 h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500/50 transition-all active:scale-95 shadow-sm"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500/50 transition-all active:scale-95 shadow-sm shrink-0"
                 >
                     <UserAvatar name={user?.name || 'User'} />
                 </button>
@@ -1204,7 +1204,7 @@ export default function MobileLabPage() {
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-500">
             <Header {...config} />
 
-            <main className="p-6 pt-24 pb-44 max-w-lg mx-auto relative z-10">
+            <main className="p-4 sm:p-6 pt-20 sm:pt-24 pb-44 max-w-lg mx-auto relative z-10">
                 {screen === 'home' && <HomeScreen />}
                 {screen === 'orders' && <OrdersScreen />}
                 {screen === 'order-detail' && <OrderDetailScreen />}
