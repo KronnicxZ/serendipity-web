@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Beaker, Layers, Save, RefreshCw, ChevronRight, ChevronLeft,
   Plus, AlertTriangle, CheckCircle, Package, ClipboardList,
-  Warehouse, ShoppingCart, PlayCircle, BoxSelect,
+  Warehouse, ShoppingCart, Play, BoxSelect, Maximize, User
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────
@@ -40,11 +40,19 @@ type Screen =
 
 // ── Helpers ────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
-  PENDING:     'bg-gray-700 text-gray-200',
-  IN_PROGRESS: 'bg-yellow-800 text-yellow-200',
-  PACKING:     'bg-blue-800 text-blue-200',
-  COMPLETED:   'bg-green-800 text-green-200',
-  CANCELLED:   'bg-red-900 text-red-200',
+  PENDING:     'border-l-4 border-slate-500 bg-slate-800/40 text-slate-300',
+  IN_PROGRESS: 'border-l-4 border-yellow-500 bg-yellow-500/10 text-yellow-500',
+  PACKING:     'border-l-4 border-blue-500 bg-blue-500/10 text-blue-400',
+  COMPLETED:   'border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-400',
+  CANCELLED:   'border-l-4 border-red-500 bg-red-500/10 text-red-400',
+};
+
+const STATUS_CHIP: Record<string, string> = {
+  PENDING:     'bg-slate-700 text-slate-200',
+  IN_PROGRESS: 'bg-yellow-600/20 text-yellow-500 border border-yellow-500/30',
+  PACKING:     'bg-blue-600/20 text-blue-400 border border-blue-400/30',
+  COMPLETED:   'bg-emerald-600/20 text-emerald-400 border border-emerald-400/30',
+  CANCELLED:   'bg-red-600/20 text-red-400 border border-red-400/30',
 };
 
 export default function ThanhMobile() {
@@ -220,92 +228,108 @@ export default function ThanhMobile() {
     return { waste: waste.toFixed(3), pct: pct.toFixed(1), alert: pct > 15 };
   }
 
-  const btn = 'w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 active:scale-95 transition-transform';
+  const btn = 'w-full py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 active:scale-95 transition-all shadow-lg active:shadow-none';
+  const inputBase = 'w-full bg-slate-900 text-white rounded-2xl px-5 py-4 text-lg border border-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all placeholder-slate-600';
 
   // ══════════════════════════════════════════════════════════
   // HOME
   // ══════════════════════════════════════════════════════════
   if (screen === 'home') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center justify-between border-b border-gray-800">
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center justify-between border-b border-slate-800/50">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-widest">Serendipity Lab</p>
-          <h1 className="text-xl font-bold">Xin chào, Thanh 👋</h1>
+          <p className="text-[10px] text-blue-400 uppercase tracking-[0.2em] font-black mb-1">Serendipity Lab</p>
+          <h1 className="text-2xl font-extrabold tracking-tight">Xin chào, Thanh <span className="animate-pulse">👋</span></h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setOwner(o => o === 'Serendipity' ? 'PRARA' : 'Serendipity')}
-            className={`text-xs px-3 py-1 rounded-full font-bold ${owner === 'Serendipity' ? 'bg-blue-700' : 'bg-orange-700'}`}
+            className={`text-[10px] px-3 py-1.5 rounded-full font-black tracking-wider transition-colors shadow-sm ${owner === 'Serendipity' ? 'bg-blue-600 text-white' : 'bg-orange-600 text-white'}`}
           >{owner}</button>
-          <button onClick={load} disabled={loading} className="p-2 text-gray-400">
-            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+          <button onClick={load} disabled={loading} className="p-2.5 bg-slate-800/50 rounded-xl border border-slate-700/50 text-slate-400 active:bg-slate-700 transition-colors">
+            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
           </button>
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
 
         {/* Stats bar */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Activas', val: activeOrders.filter(o => o.status === 'IN_PROGRESS').length, color: 'text-yellow-400' },
-            { label: 'Pendientes', val: activeOrders.filter(o => o.status === 'PENDING').length, color: 'text-gray-300' },
-            { label: 'Compras ⚠️', val: purchaseReqs.length, color: 'text-red-400' },
+            { label: 'Activas', val: activeOrders.filter(o => o.status === 'IN_PROGRESS').length, color: 'text-yellow-400', bg: 'bg-yellow-400/10' },
+            { label: 'Pendientes', val: activeOrders.filter(o => o.status === 'PENDING').length, color: 'text-blue-400', bg: 'bg-blue-400/10' },
+            { label: 'Compras', val: purchaseReqs.length, color: 'text-rose-400', bg: 'bg-rose-400/10', warning: true },
           ].map(s => (
-            <div key={s.label} className="bg-gray-800 rounded-xl p-3 text-center border border-gray-700">
-              <p className={`text-2xl font-bold ${s.color}`}>{s.val}</p>
-              <p className="text-xs text-gray-400 mt-1">{s.label}</p>
+            <div key={s.label} className={`${s.bg} rounded-3xl p-5 text-center border border-white/5 shadow-xl`}>
+              <p className={`text-3xl font-black ${s.color}`}>{s.val}{s.warning && s.val > 0 ? '!' : ''}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-2">{s.label}</p>
             </div>
           ))}
         </div>
 
         {/* Active POs */}
-        {activeOrders.slice(0, 3).map(o => (
-          <div key={o.id}
-            onClick={() => { setSelectedPO(o); if (o.formula_name) loadFormulaLayers(o.id); setScreen('order-detail'); }}
-            className="bg-gray-800 rounded-xl p-4 flex items-center justify-between cursor-pointer border border-gray-700 active:bg-gray-700"
-          >
-            <div>
-              <p className="font-bold">{o.po_number}</p>
-              <p className="text-sm text-gray-400">{o.article_name || '—'} · {o.sf_target} SF</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className={`text-xs px-2 py-1 rounded-full font-bold ${STATUS_COLOR[o.status] ?? 'bg-gray-700'}`}>
-                {o.status}
-              </span>
-              <ChevronRight size={16} className="text-gray-500" />
-            </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Órdenes Activas</h2>
+            <button onClick={() => setScreen('orders')} className="text-xs font-bold text-blue-400">Ver todas</button>
           </div>
-        ))}
+          <div className="space-y-3">
+            {activeOrders.slice(0, 3).map(o => (
+              <div key={o.id}
+                onClick={() => { setSelectedPO(o); if (o.formula_name) loadFormulaLayers(o.id); setScreen('order-detail'); }}
+                className={`bg-slate-900/80 rounded-2xl p-5 flex items-center justify-between cursor-pointer border border-slate-800/50 active:bg-slate-800 transition-all shadow-lg ${STATUS_COLOR[o.status] || 'border-l-4 border-slate-700'}`}
+              >
+                <div className="space-y-1">
+                  <p className="font-black text-lg tracking-tight">{o.po_number}</p>
+                  <p className="text-sm text-slate-400 font-medium">{o.article_name || '—'} · <span className="text-slate-300 font-bold">{o.sf_target} SF</span></p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${STATUS_CHIP[o.status] ?? 'bg-slate-700'}`}>
+                    {o.status}
+                  </span>
+                  <ChevronRight size={20} className="text-slate-600" />
+                </div>
+              </div>
+            ))}
+            {activeOrders.length === 0 && (
+              <div className="bg-slate-900/40 rounded-2xl p-8 border border-dashed border-slate-800 text-center">
+                <p className="text-slate-500 text-sm font-medium italic">No hay órdenes activas</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Purchase requests alert */}
         {purchaseReqs.length > 0 && (
           <button onClick={() => setScreen('purchase-requests')}
-            className="w-full bg-red-950 border border-red-800 rounded-xl p-4 flex items-center justify-between active:bg-red-900">
-            <div className="flex items-center gap-3">
-              <AlertTriangle size={20} className="text-red-400" />
-              <div className="text-left">
-                <p className="font-bold text-red-200">Solicitudes de compra</p>
-                <p className="text-xs text-red-400">{purchaseReqs.length} pendientes — requieren aprobación</p>
+            className="w-full bg-rose-500/10 border border-rose-500/20 rounded-3xl p-6 flex items-center justify-between active:scale-[0.98] transition-transform shadow-lg shadow-rose-950/20">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-rose-500/20 rounded-2xl text-rose-400">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="text-left space-y-1">
+                <p className="font-black text-rose-100 text-lg">Solicitudes de compra</p>
+                <p className="text-sm font-medium text-rose-400/80">{purchaseReqs.length} pendientes — requieren aprobación</p>
               </div>
             </div>
-            <ChevronRight size={16} className="text-red-500" />
+            <ChevronRight size={20} className="text-rose-500/50" />
           </button>
         )}
 
         {/* Actions */}
-        <div className="space-y-3 pt-1">
-          <button onClick={() => setScreen('orders')} className={`${btn} bg-gray-700 text-white`}>
-            <ClipboardList size={22} /> Todas las órdenes
+        <div className="grid grid-cols-2 gap-4 pt-2">
+          <button onClick={() => setScreen('batch')} className={`${btn} col-span-2 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-blue-950/40`}>
+            <Beaker size={24} /> <span>Nuevo lote / Lô mới</span>
           </button>
-          <button onClick={() => setScreen('batch')} className={`${btn} bg-blue-700 text-white`}>
-            <Beaker size={22} /> Nuevo lote / Lô mới
+          <button onClick={() => setScreen('orders')} className={`${btn} bg-slate-800 text-slate-200 border border-slate-700/50`}>
+            <ClipboardList size={20} /> <span className="text-sm">Órdenes</span>
           </button>
-          <button onClick={() => setScreen('formula-list')} className={`${btn} bg-gray-700 text-white`}>
-            <Layers size={22} /> Fórmulas / Công thức
+          <button onClick={() => setScreen('formula-list')} className={`${btn} bg-slate-800 text-slate-200 border border-slate-700/50`}>
+            <Layers size={20} /> <span className="text-sm">Fórmulas</span>
           </button>
-          <button onClick={() => setScreen('formula-builder')} className={`${btn} bg-emerald-800 text-white`}>
-            <Plus size={22} /> Nueva fórmula
+          <button onClick={() => setScreen('formula-builder')} className={`${btn} col-span-2 bg-slate-900 text-emerald-400 border border-emerald-500/20`}>
+            <Plus size={22} /> <span>Nueva fórmula / Công thức mới</span>
           </button>
         </div>
       </div>
@@ -316,15 +340,15 @@ export default function ThanhMobile() {
   // ALL ORDERS
   // ══════════════════════════════════════════════════════════
   if (screen === 'orders') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('home')} className="p-1"><ChevronLeft size={22} /></button>
-        <h1 className="text-xl font-bold">Todas las órdenes</h1>
-        <button onClick={load} className="ml-auto p-2 text-gray-400">
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('home')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <h1 className="text-xl font-black">Todas las órdenes</h1>
+        <button onClick={load} className="ml-auto p-2.5 bg-slate-800/50 rounded-xl border border-slate-700/50 text-slate-400">
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {allOrders.map(o => (
           <div key={o.id}
             onClick={() => {
@@ -332,25 +356,40 @@ export default function ThanhMobile() {
               if (o.formula_name) loadFormulaLayers(o.id);
               setScreen('order-detail');
             }}
-            className="bg-gray-800 rounded-xl p-4 border border-gray-700 cursor-pointer active:bg-gray-700"
+            className={`bg-slate-900/80 rounded-2xl p-5 border border-slate-800/50 cursor-pointer active:bg-slate-800 transition-all shadow-lg ${STATUS_COLOR[o.status] || 'border-l-4 border-slate-700'}`}
           >
-            <div className="flex items-center justify-between mb-1">
-              <p className="font-bold">{o.po_number}</p>
-              <span className={`text-xs px-2 py-1 rounded-full font-bold ${STATUS_COLOR[o.status] ?? 'bg-gray-700'}`}>
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-black text-lg tracking-tight">{o.po_number}</p>
+              <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${STATUS_CHIP[o.status] ?? 'bg-slate-700'}`}>
                 {o.status}
               </span>
             </div>
-            <p className="text-sm text-gray-300">{o.article_name || '—'}</p>
-            <div className="flex items-center gap-4 mt-2 text-xs text-gray-400">
-              <span>Target: {o.sf_target} SF</span>
-              {o.sf_produced > 0 && <span className="text-green-400">Produced: {o.sf_produced} SF</span>}
-              {o.sf_packed > 0   && <span className="text-blue-400">Packed: {o.sf_packed} SF</span>}
-              <span className={o.owner === 'PRARA' ? 'text-orange-400' : 'text-blue-400'}>{o.owner}</span>
+            <p className="text-sm text-slate-400 font-medium mb-4">{o.article_name || '—'}</p>
+            <div className="grid grid-cols-2 gap-y-3 pt-4 border-t border-slate-800/50">
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Objetivo</p>
+                <p className="text-sm font-black text-slate-200">{o.sf_target} SF</p>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Producido</p>
+                <p className={`text-sm font-black ${o.sf_produced > 0 ? 'text-emerald-400' : 'text-slate-400'}`}>{o.sf_produced || 0} SF</p>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Propietario</p>
+                <p className={`text-sm font-black ${o.owner === 'PRARA' ? 'text-orange-400' : 'text-blue-400'}`}>{o.owner}</p>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Empacado</p>
+                <p className={`text-sm font-black ${o.sf_packed > 0 ? 'text-blue-400' : 'text-slate-400'}`}>{o.sf_packed || 0} SF</p>
+              </div>
             </div>
           </div>
         ))}
         {allOrders.length === 0 && (
-          <p className="text-gray-500 text-center py-10 text-sm">Không có đơn hàng</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 italic">
+            <ClipboardList size={48} className="opacity-20 mb-4" />
+            <p>Không có đơn hàng</p>
+          </div>
         )}
       </div>
     </div>
@@ -360,71 +399,88 @@ export default function ThanhMobile() {
   // ORDER DETAIL
   // ══════════════════════════════════════════════════════════
   if (screen === 'order-detail' && selectedPO) return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('orders')} className="p-1"><ChevronLeft size={22} /></button>
-        <div>
-          <h1 className="text-xl font-bold">{selectedPO.po_number}</h1>
-          <p className="text-xs text-gray-400">{selectedPO.article_name} · {selectedPO.owner}</p>
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('orders')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <div className="flex-1">
+          <h1 className="text-xl font-black tracking-tight">{selectedPO.po_number}</h1>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{selectedPO.article_name} · {selectedPO.owner}</p>
         </div>
-        <span className={`ml-auto text-xs px-2 py-1 rounded-full font-bold ${STATUS_COLOR[selectedPO.status] ?? 'bg-gray-700'}`}>
+        <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${STATUS_CHIP[selectedPO.status] ?? 'bg-slate-700'}`}>
           {selectedPO.status}
         </span>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        {/* Progress */}
-        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Target</span>
-            <span className="font-bold">{selectedPO.sf_target} SF</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Producido</span>
-            <span className="font-bold text-yellow-400">{selectedPO.sf_produced || 0} SF</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-400">Empacado</span>
-            <span className="font-bold text-green-400">{selectedPO.sf_packed || 0} SF</span>
-          </div>
-          {selectedPO.sf_target > 0 && (
-            <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+        {/* Progress Card */}
+        <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800 shadow-2xl space-y-6">
+          <div className="space-y-4">
+            <div className="flex justify-between items-end">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Progreso de Producción</span>
+              <span className="text-2xl font-black text-slate-100">
+                {Math.round(((selectedPO.sf_produced || 0) / selectedPO.sf_target) * 100)}%
+              </span>
+            </div>
+            <div className="w-full bg-slate-800/50 rounded-full h-4 p-1 overflow-hidden border border-white/5">
               <div
-                className="bg-blue-500 h-2 rounded-full transition-all"
+                className="bg-gradient-to-r from-blue-600 to-indigo-500 h-full rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(37,99,235,0.4)]"
                 style={{ width: `${Math.min(100, ((selectedPO.sf_produced || 0) / selectedPO.sf_target) * 100)}%` }}
               />
             </div>
-          )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            <div className="text-center space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Target</p>
+              <p className="text-base font-black text-slate-200">{selectedPO.sf_target} <span className="text-[10px] opacity-50">SF</span></p>
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-yellow-500/80">Hecho</p>
+              <p className="text-base font-black text-yellow-500">{selectedPO.sf_produced || 0} <span className="text-[10px] opacity-50">SF</span></p>
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest text-emerald-500/80">Empacado</p>
+              <p className="text-base font-black text-emerald-500">{selectedPO.sf_packed || 0} <span className="text-[10px] opacity-50">SF</span></p>
+            </div>
+          </div>
         </div>
 
         {/* Formula */}
         {selectedPO.formula_name && (
-          <div className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Fórmula</p>
-            <p className="font-bold">{selectedPO.formula_name}</p>
+          <div className="bg-slate-900/50 rounded-3xl p-6 border border-slate-800/50 flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Fórmula Activa</p>
+              <p className="text-lg font-black text-slate-200">{selectedPO.formula_name}</p>
+            </div>
+            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-400">
+              <Layers size={24} />
+            </div>
           </div>
         )}
 
         {/* Inventory status */}
         {selectedPO.inventory_ok !== null && (
-          <div className={`rounded-xl p-4 border flex items-center gap-3 ${selectedPO.inventory_ok ? 'bg-green-950 border-green-800' : 'bg-red-950 border-red-800'}`}>
-            {selectedPO.inventory_ok
-              ? <><CheckCircle size={20} className="text-green-400" /><span className="text-green-200 font-bold">Inventario confirmado ✓</span></>
-              : <><AlertTriangle size={20} className="text-red-400" /><span className="text-red-200 font-bold">Falta de stock — ver compras</span></>
-            }
+          <div className={`rounded-3xl p-6 border flex items-center gap-4 shadow-lg transition-all ${selectedPO.inventory_ok ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border-rose-500/20 text-rose-100'}`}>
+            <div className={`p-3 rounded-2xl ${selectedPO.inventory_ok ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+              {selectedPO.inventory_ok ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+            </div>
+            <div className="flex-1">
+              <p className="font-black text-lg">{selectedPO.inventory_ok ? 'Inventario OK' : 'Falta de Stock'}</p>
+              <p className={`text-xs font-medium opacity-80`}>{selectedPO.inventory_ok ? 'Todos los materiales están disponibles' : 'Se requiere aprobación de compra'}</p>
+            </div>
           </div>
         )}
 
         {/* Actions by status */}
-        <div className="space-y-3">
+        <div className="space-y-4 pt-4">
           {selectedPO.status === 'PENDING' && (
             <button
               onClick={() => sendToProduction(selectedPO.id)}
               disabled={loading}
-              className={`${btn} bg-green-700 text-white disabled:opacity-40`}
+              className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-xl shadow-emerald-950/20 bg-gradient-to-r from-emerald-600 to-teal-500 text-white disabled:opacity-40`}
             >
-              {loading ? <RefreshCw size={20} className="animate-spin" /> : <PlayCircle size={22} />}
-              Enviar a producción
+              {loading ? <RefreshCw size={24} className="animate-spin" /> : <PlayCircle size={28} />}
+              <span>ENVIAR A PRODUCCIÓN</span>
             </button>
           )}
 
@@ -434,15 +490,15 @@ export default function ThanhMobile() {
                 if (selectedFormula) setScreen('batch');
                 else { loadFormulaLayers(selectedPO.id).then(() => setScreen('batch')); }
               }}
-              className={`${btn} bg-blue-700 text-white`}
+              className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-xl shadow-blue-950/20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white`}
             >
-              <Beaker size={22} /> Ejecutar lote
+              <Beaker size={28} /> <span>EJECUTAR LOTE</span>
             </button>
           )}
 
           {selectedPO.status === 'PACKING' && (
-            <button onClick={() => setScreen('packing')} className={`${btn} bg-purple-700 text-white`}>
-              <BoxSelect size={22} /> Empacar y medir
+            <button onClick={() => setScreen('packing')} className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-xl shadow-purple-950/20 bg-gradient-to-r from-purple-600 to-fuchsia-700 text-white`}>
+              <BoxSelect size={28} /> <span>EMPACAR Y MEDIR</span>
             </button>
           )}
         </div>
@@ -454,66 +510,76 @@ export default function ThanhMobile() {
   // INVENTORY CHECK RESULT
   // ══════════════════════════════════════════════════════════
   if (screen === 'inventory-check') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('order-detail')} className="p-1"><ChevronLeft size={22} /></button>
-        <h1 className="text-xl font-bold">Kiểm tra kho / Inventario</h1>
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('order-detail')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <h1 className="text-xl font-black">Kiểm tra kho / Inventario</h1>
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-6">
         {checkResult?.ok ? (
-          <div className="bg-green-950 border border-green-700 rounded-xl p-6 text-center space-y-3">
-            <CheckCircle size={48} className="text-green-400 mx-auto" />
-            <p className="text-2xl font-bold text-green-300">¡Todo listo!</p>
-            <p className="text-green-400">Todos los químicos y cueros están disponibles.</p>
-            <p className="text-sm text-green-500">La PO ya está activa — Thanh puede comenzar el lote.</p>
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-[2rem] p-10 text-center space-y-6 shadow-2xl">
+            <div className="p-5 bg-emerald-500/20 rounded-full w-fit mx-auto text-emerald-400">
+              <CheckCircle size={64} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-3xl font-black text-emerald-100 tracking-tight">¡Todo listo!</p>
+              <p className="text-emerald-400/80 font-medium leading-relaxed text-lg">Todos los químicos y cueros están disponibles para iniciar.</p>
+            </div>
+            <p className="text-sm text-emerald-500 font-bold uppercase tracking-widest bg-emerald-500/5 py-3 rounded-2xl border border-emerald-500/10">La PO ya está activa</p>
           </div>
         ) : (
           <>
-            <div className="bg-red-950 border border-red-700 rounded-xl p-5 text-center">
-              <AlertTriangle size={40} className="text-red-400 mx-auto mb-2" />
-              <p className="text-xl font-bold text-red-300">Falta de stock</p>
-              <p className="text-sm text-red-400 mt-1">Se notificó a Tuyen. La PO espera confirmación.</p>
+            <div className="bg-rose-500/10 border border-rose-500/20 rounded-[2rem] p-8 text-center space-y-4 shadow-2xl">
+              <div className="p-4 bg-rose-500/20 rounded-full w-fit mx-auto text-rose-400">
+                <AlertTriangle size={48} />
+              </div>
+              <div className="space-y-1">
+                <p className="text-2xl font-black text-rose-100">Falta de stock</p>
+                <p className="text-sm font-medium text-rose-400/80">Se notificó a Tuyen. La PO espera confirmación.</p>
+              </div>
             </div>
 
-            <p className="text-xs text-gray-400 uppercase tracking-widest">Materiales faltantes</p>
+            <div className="px-1 flex items-center justify-between">
+              <h2 className="text-xs font-black text-slate-500 uppercase tracking-[0.2em]">Materiales faltantes</h2>
+              <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md border border-slate-700">{checkResult?.shortages.length} ítems</span>
+            </div>
 
-            {checkResult?.shortages.map((s, i) => (
-              <div key={i} className="bg-gray-800 border border-red-900 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="font-bold">{s.name}</p>
-                  <span className={`text-xs px-2 py-1 rounded-full font-bold ${s.type === 'CHEMICAL' ? 'bg-blue-900 text-blue-200' : 'bg-orange-900 text-orange-200'}`}>
-                    {s.type === 'CHEMICAL' ? '🧪 Químico' : '🐄 Cuero'}
-                  </span>
+            <div className="space-y-4">
+              {checkResult?.shortages.map((s, i) => (
+                <div key={i} className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-lg">
+                  <div className="flex items-center justify-between mb-6">
+                    <p className="font-black text-lg text-slate-200 tracking-tight">{s.name}</p>
+                    <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${s.type === 'CHEMICAL' ? 'bg-blue-600/20 text-blue-400 border border-blue-400/30' : 'bg-orange-600/20 text-orange-400 border border-orange-400/30'}`}>
+                      {s.type === 'CHEMICAL' ? '🧪 Químico' : '🐄 Cuero'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-4 border-t border-slate-800/50 pt-6">
+                    <div className="space-y-1">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Necesario</p>
+                      <p className="text-lg font-black text-rose-400">{s.needed.toFixed(2)} <span className="text-[10px] opacity-50 uppercase">{s.unit}</span></p>
+                    </div>
+                    <div className="space-y-1 text-center">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Stock</p>
+                      <p className="text-lg font-black text-slate-300">{s.available.toFixed(2)} <span className="text-[10px] opacity-50 uppercase">{s.unit}</span></p>
+                    </div>
+                    <div className="space-y-1 text-right">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Déficit</p>
+                      <p className="text-lg font-black text-rose-500">{(s.needed - s.available).toFixed(2)} <span className="text-[10px] opacity-50 uppercase">{s.unit}</span></p>
+                    </div>
+                  </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div className="text-center">
-                    <p className="text-gray-400 text-xs">Necesario</p>
-                    <p className="font-bold text-red-300">{s.needed.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">{s.unit}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-gray-400 text-xs">Disponible</p>
-                    <p className="font-bold text-gray-300">{s.available.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">{s.unit}</p>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-gray-400 text-xs">Déficit</p>
-                    <p className="font-bold text-red-400">{(s.needed - s.available).toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">{s.unit}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <button onClick={() => setScreen('purchase-requests')} className={`${btn} bg-red-900 text-white`}>
-              <ShoppingCart size={20} /> Ver solicitudes de compra
+            <button onClick={() => setScreen('purchase-requests')} className={`${btn} bg-rose-600/10 text-rose-100 border border-rose-500/30`}>
+              <ShoppingCart size={20} /> <span>Ver solicitudes de compra</span>
             </button>
           </>
         )}
 
-        <button onClick={() => setScreen('home')} className={`${btn} bg-gray-700 text-white`}>
-          Volver al inicio
+        <button onClick={() => setScreen('home')} className={`${btn} bg-slate-800 text-slate-200 border border-slate-700/50`}>
+          <span>Volver al inicio</span>
         </button>
       </div>
     </div>
@@ -523,44 +589,58 @@ export default function ThanhMobile() {
   // PURCHASE REQUESTS
   // ══════════════════════════════════════════════════════════
   if (screen === 'purchase-requests') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('home')} className="p-1"><ChevronLeft size={22} /></button>
-        <h1 className="text-xl font-bold">Solicitudes de compra</h1>
-        <button onClick={load} className="ml-auto p-2 text-gray-400">
-          <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('home')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <h1 className="text-xl font-black">Solicitudes de compra</h1>
+        <button onClick={load} className="ml-auto p-2.5 bg-slate-800/50 rounded-xl border border-slate-700/50 text-slate-400">
+          <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
         </button>
       </header>
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {purchaseReqs.length === 0 && (
-          <p className="text-gray-500 text-center py-10 text-sm">No hay solicitudes pendientes</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 italic">
+            <CheckCircle size={48} className="opacity-20 mb-4 text-emerald-400" />
+            <p>No hay solicitudes pendientes</p>
+          </div>
         )}
         {purchaseReqs.map(pr => (
-          <div key={pr.id} className={`rounded-xl p-4 border ${pr.urgency === 'URGENT' ? 'border-red-800 bg-red-950' : 'border-gray-700 bg-gray-800'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-bold">{pr.item_name}</p>
+          <div key={pr.id} className={`rounded-3xl p-6 border shadow-xl transition-all ${pr.urgency === 'URGENT' ? 'border-rose-500/30 bg-rose-500/5' : 'border-slate-800 bg-slate-900/80'}`}>
+            <div className="flex items-center justify-between mb-6">
+              <p className="font-black text-lg tracking-tight">{pr.item_name}</p>
               <div className="flex gap-2">
-                {pr.urgency === 'URGENT' && <span className="text-xs bg-red-800 text-red-200 px-2 py-1 rounded-full font-bold">URGENTE</span>}
-                <span className={`text-xs px-2 py-1 rounded-full font-bold ${pr.type === 'CHEMICAL' ? 'bg-blue-900 text-blue-200' : 'bg-orange-900 text-orange-200'}`}>
+                {pr.urgency === 'URGENT' && <span className="text-[10px] bg-rose-600 text-white px-2.5 py-1 rounded-lg font-black tracking-wider uppercase">URGENTE</span>}
+                <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${pr.type === 'CHEMICAL' ? 'bg-blue-600/20 text-blue-400 border border-blue-400/30' : 'bg-orange-600/20 text-orange-400 border border-orange-400/30'}`}>
                   {pr.type === 'CHEMICAL' ? '🧪' : '🐄'} {pr.type}
                 </span>
               </div>
             </div>
-            <div className="text-sm text-gray-400 space-y-1">
-              <p>PO: <span className="text-white">{pr.po_number ?? '—'}</span></p>
-              <p>Necesario: <span className="text-red-300 font-bold">{pr.qty_needed} {pr.unit}</span></p>
-              <p>En stock: <span className="text-gray-300">{pr.qty_in_stock} {pr.unit}</span></p>
+            <div className="grid grid-cols-2 gap-y-4 border-t border-slate-800/50 pt-6 mb-6">
+              <div className="space-y-0.5">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Orden</p>
+                <p className="text-sm font-black text-slate-200">{pr.po_number ?? '—'}</p>
+              </div>
+              <div className="space-y-0.5 text-right">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">En Stock</p>
+                <p className="text-sm font-black text-slate-400">{pr.qty_in_stock} <span className="text-[10px] opacity-50 uppercase">{pr.unit}</span></p>
+              </div>
+              <div className="space-y-0.5 col-span-2">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cantidad Requerida</p>
+                <p className="text-xl font-black text-rose-400">{pr.qty_needed} <span className="text-xs opacity-50 uppercase">{pr.unit}</span></p>
+              </div>
             </div>
             {pr.status === 'PENDING' && (
               <button
                 onClick={() => approvePurchase(pr.id)}
-                className="mt-3 w-full py-3 bg-green-800 hover:bg-green-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2"
+                className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 transition-colors shadow-lg shadow-emerald-950/20"
               >
-                <CheckCircle size={16} /> Aprobar compra (Thanh)
+                <CheckCircle size={20} /> <span>APROBAR COMPRA (THANH)</span>
               </button>
             )}
             {pr.status === 'APPROVED' && (
-              <p className="mt-2 text-xs text-green-400 font-bold text-center">✓ Aprobado — Tuyen procesa el pedido</p>
+              <div className="py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center">
+                <p className="text-xs text-emerald-400 font-black tracking-widest uppercase">✓ APROBADO POR THANH</p>
+              </div>
             )}
           </div>
         ))}
@@ -572,23 +652,31 @@ export default function ThanhMobile() {
   // FORMULA LIST
   // ══════════════════════════════════════════════════════════
   if (screen === 'formula-list') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('home')} className="p-1"><ChevronLeft size={22} /></button>
-        <h1 className="text-xl font-bold">Fórmulas / Công thức</h1>
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('home')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <h1 className="text-xl font-black">Fórmulas / Công thức</h1>
       </header>
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-3">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4">
         {formulas.map(f => (
-          <div key={f.id} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
-            <p className="font-bold">{f.name}</p>
-            <p className="text-sm text-gray-400 mt-1">{f.code} · {f.layer_count} bước / pasos</p>
+          <div key={f.id} className="bg-slate-900/80 rounded-3xl p-6 border border-slate-800 shadow-xl flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-black text-lg tracking-tight text-slate-200">{f.name}</p>
+              <p className="text-sm font-medium text-slate-500">{f.code} · <span className="text-blue-400 font-bold">{f.layer_count} pasos</span></p>
+            </div>
+            <div className="p-3 bg-slate-800/50 rounded-2xl text-slate-500">
+              <ChevronRight size={20} />
+            </div>
           </div>
         ))}
         {formulas.length === 0 && (
-          <p className="text-gray-500 text-center py-8 text-sm">Chưa có công thức</p>
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 italic">
+            <Layers size={48} className="opacity-20 mb-4" />
+            <p>Chưa có công thức</p>
+          </div>
         )}
-        <button onClick={() => setScreen('formula-builder')} className={`${btn} bg-emerald-800 text-white mt-4`}>
-          <Plus size={20} /> Nueva fórmula
+        <button onClick={() => setScreen('formula-builder')} className={`${btn} bg-emerald-600/10 text-emerald-400 border border-emerald-500/20 mt-4`}>
+          <Plus size={24} /> <span>Nueva fórmula</span>
         </button>
       </div>
     </div>
@@ -598,93 +686,112 @@ export default function ThanhMobile() {
   // FORMULA BUILDER
   // ══════════════════════════════════════════════════════════
   if (screen === 'formula-builder') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('formula-list')} className="p-1"><ChevronLeft size={22} /></button>
-        <h1 className="text-xl font-bold">Nueva fórmula / Công thức mới</h1>
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center gap-4 border-b border-slate-800/50">
+        <button onClick={() => setScreen('formula-list')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+        <h1 className="text-xl font-black tracking-tight leading-tight">Nueva fórmula<br/><span className="text-sm text-slate-400 font-bold uppercase tracking-widest">Công thức mới</span></h1>
       </header>
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <input value={newFormulaName} onChange={e => setNewFormulaName(e.target.value)}
-          placeholder="Tên công thức / Nombre de la fórmula"
-          className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 text-lg border border-gray-700 placeholder-gray-500" />
-        <input value={newFormulaDesc} onChange={e => setNewFormulaDesc(e.target.value)}
-          placeholder="Mô tả / Descripción (opcional)"
-          className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-700 placeholder-gray-500" />
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8">
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Información General</label>
+          <input value={newFormulaName} onChange={e => setNewFormulaName(e.target.value)}
+            placeholder="Tên công thức / Nombre"
+            className={inputBase} />
+          <input value={newFormulaDesc} onChange={e => setNewFormulaDesc(e.target.value)}
+            placeholder="Mô tả / Descripción (opcional)"
+            className={inputBase} />
+        </div>
 
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Các bước / Capas ({builderLayers.length})</p>
-          {builderLayers.map((layer, idx) => (
-            <div key={idx} className="bg-gray-800 rounded-xl p-4 mb-3 border border-gray-700 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-400">BƯỚC {layer.layer_order}</span>
-                <span className={`text-xs px-2 py-1 rounded-full font-bold ${layer.layer_type === 'CHEMICAL' ? 'bg-blue-900 text-blue-200' : 'bg-purple-900 text-purple-200'}`}>
-                  {layer.layer_type === 'CHEMICAL' ? '🧪 Hóa chất' : '⚙️ Cơ học'}
-                </span>
-                <button onClick={() => setBuilderLayers(ls => ls.filter((_, i) => i !== idx))}
-                  className="text-red-500 text-sm px-2">✕</button>
-              </div>
-              {layer.layer_type === 'CHEMICAL' ? (
-                <div className="space-y-2">
-                  <select
-                    value={layer.chemical_id ?? ''}
-                    onChange={e => {
-                      const chem = chemicals.find(c => c.id === Number(e.target.value));
-                      setBuilderLayers(ls => ls.map((l, i) => i === idx
-                        ? { ...l, chemical_id: chem?.id, chemical_name: chem?.name } : l));
-                    }}
-                    className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 text-sm border border-gray-600"
-                  >
-                    <option value="">— Chọn hóa chất —</option>
-                    {chemicals.map(c => <option key={c.id} value={c.id}>{c.name} ({c.category})</option>)}
-                  </select>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-xs text-gray-400">% en mezcla</label>
-                      <input type="number" value={layer.pct_in_mix ?? ''}
-                        onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, pct_in_mix: Number(e.target.value) } : l))}
-                        placeholder="100" className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 text-sm" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-gray-400">kg / SF</label>
-                      <input type="number" value={layer.qty_per_sf ?? ''}
-                        onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_per_sf: Number(e.target.value) } : l))}
-                        placeholder="0.010" className="w-full bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 text-sm" />
-                    </div>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Pasos ({builderLayers.length})</h2>
+          </div>
+          <div className="space-y-4">
+            {builderLayers.map((layer, idx) => (
+              <div key={idx} className="bg-slate-900/50 rounded-[2rem] p-6 border border-slate-800 shadow-xl space-y-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full">PASO {layer.layer_order}</span>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] px-2.5 py-1 rounded-lg font-black tracking-wider uppercase ${layer.layer_type === 'CHEMICAL' ? 'bg-blue-600/20 text-blue-400 border border-blue-400/30' : 'bg-purple-600/20 text-purple-400 border border-purple-400/30'}`}>
+                      {layer.layer_type === 'CHEMICAL' ? '🧪 Químico' : '⚙️ Mecánico'}
+                    </span>
+                    <button onClick={() => setBuilderLayers(ls => ls.filter((_, i) => i !== idx))}
+                      className="p-2 bg-rose-500/10 text-rose-500 rounded-xl active:bg-rose-500/20 transition-colors">✕</button>
                   </div>
                 </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  <input value={layer.machine ?? ''} onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, machine: e.target.value } : l))}
-                    placeholder="Máquina" className="bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 text-sm" />
-                  <input type="number" value={layer.temperature_c ?? ''} onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, temperature_c: Number(e.target.value) } : l))}
-                    placeholder="°C" className="bg-gray-700 text-white rounded-lg px-3 py-2 border border-gray-600 text-sm" />
-                </div>
-              )}
-            </div>
-          ))}
 
-          <div className="grid grid-cols-2 gap-3 mt-2">
+                {layer.layer_type === 'CHEMICAL' ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Seleccionar Químico</label>
+                      <select
+                        value={layer.chemical_id ?? ''}
+                        onChange={e => {
+                          const chem = chemicals.find(c => c.id === Number(e.target.value));
+                          setBuilderLayers(ls => ls.map((l, i) => i === idx
+                            ? { ...l, chemical_id: chem?.id, chemical_name: chem?.name } : l));
+                        }}
+                        className="w-full bg-slate-800 text-white rounded-2xl px-4 py-4 text-sm border border-slate-700 outline-none focus:border-blue-500 transition-all appearance-none"
+                      >
+                        <option value="">— Chọn hóa chất —</option>
+                        {chemicals.map(c => <option key={c.id} value={c.id}>{c.name} ({c.category})</option>)}
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">% en mezcla</label>
+                        <input type="number" value={layer.pct_in_mix ?? ''}
+                          onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, pct_in_mix: Number(e.target.value) } : l))}
+                          placeholder="100" className="w-full bg-slate-800 text-white rounded-2xl px-4 py-4 text-lg font-black border border-slate-700 outline-none" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">kg / SF</label>
+                        <input type="number" value={layer.qty_per_sf ?? ''}
+                          onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_per_sf: Number(e.target.value) } : l))}
+                          placeholder="0.010" className="w-full bg-slate-800 text-white rounded-2xl px-4 py-4 text-lg font-black border border-slate-700 outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Máquina</label>
+                      <input value={layer.machine ?? ''} onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, machine: e.target.value } : l))}
+                        placeholder="Spray" className="w-full bg-slate-800 text-white rounded-2xl px-4 py-4 font-bold border border-slate-700 outline-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Temp °C</label>
+                      <input type="number" value={layer.temperature_c ?? ''} onChange={e => setBuilderLayers(ls => ls.map((l, i) => i === idx ? { ...l, temperature_c: Number(e.target.value) } : l))}
+                        placeholder="80" className="w-full bg-slate-800 text-white rounded-2xl px-4 py-4 font-black border border-slate-700 outline-none" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 pt-4 sticky bottom-24 z-10 bg-gradient-to-t from-[#0B0F1A] via-[#0B0F1A] pb-4">
             <button onClick={() => {
               const order = builderLayers.length + 1;
               setBuilderLayers(ls => [...ls, { layer_order: order, layer_type: 'CHEMICAL', name: `Hóa chất ${order}`, chemical_id: chemicals[0]?.id, chemical_name: chemicals[0]?.name, pct_in_mix: 100, qty_per_sf: 0.01 }]);
-            }} className="bg-blue-900 text-blue-100 rounded-xl py-4 font-bold text-sm flex items-center justify-center gap-2">
-              <Plus size={16} /> 🧪 Hóa chất
+            }} className="bg-blue-600 text-white rounded-3xl py-5 font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-blue-950/20 active:scale-95 transition-all">
+              <Plus size={20} /> 🧪 QUÍMICO
             </button>
             <button onClick={() => {
               const order = builderLayers.length + 1;
               setBuilderLayers(ls => [...ls, { layer_order: order, layer_type: 'MECHANICAL', name: `Cơ học ${order}`, machine: 'Spray', passes: 1 }]);
-            }} className="bg-purple-900 text-purple-100 rounded-xl py-4 font-bold text-sm flex items-center justify-center gap-2">
-              <Plus size={16} /> ⚙️ Cơ học
+            }} className="bg-purple-600 text-white rounded-3xl py-5 font-black text-sm flex items-center justify-center gap-3 shadow-lg shadow-purple-950/20 active:scale-95 transition-all">
+              <Plus size={20} /> ⚙️ MECÁNICO
             </button>
           </div>
         </div>
       </div>
-      <div className="px-4 pb-6 pt-3 bg-gray-950 border-t border-gray-800">
+      <div className="px-6 pb-10 pt-4 bg-slate-900 border-t border-slate-800 rounded-t-[2.5rem] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         {saved
-          ? <div className="flex items-center justify-center gap-2 text-green-400 py-4 font-bold"><CheckCircle size={22} /> Guardado ✓</div>
-          : <button onClick={saveFormula} disabled={loading || !newFormulaName || !builderLayers.length} className={`${btn} bg-emerald-700 text-white disabled:opacity-40`}>
-              {loading ? <RefreshCw size={20} className="animate-spin" /> : <Save size={20} />}
-              Guardar fórmula
+          ? <div className="flex items-center justify-center gap-3 text-emerald-400 py-4 font-black text-lg"><CheckCircle size={28} /> GUARDADO ✓</div>
+          : <button onClick={saveFormula} disabled={loading || !newFormulaName || !builderLayers.length} className="w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-xl shadow-emerald-950/20 bg-emerald-600 text-white disabled:opacity-40">
+              {loading ? <RefreshCw size={24} className="animate-spin" /> : <Save size={24} />}
+              <span>GUARDAR FÓRMULA</span>
             </button>
         }
       </div>
@@ -695,22 +802,26 @@ export default function ThanhMobile() {
   // BATCH EXECUTION
   // ══════════════════════════════════════════════════════════
   if (screen === 'batch') return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen(selectedPO ? 'order-detail' : 'home')} className="p-1"><ChevronLeft size={22} /></button>
-        <div>
-          <h1 className="text-xl font-bold">Thực hiện Lô / Lote</h1>
-          {selectedPO && <p className="text-xs text-gray-400">{selectedPO.po_number} · {selectedPO.sf_target} SF</p>}
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center justify-between border-b border-slate-800/50">
+        <div className="flex items-center gap-4">
+          <button onClick={() => setScreen(selectedPO ? 'order-detail' : 'home')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+          <h1 className="text-xl font-black tracking-tight leading-tight">Batch Execution<br/><span className="text-sm text-slate-400 font-bold uppercase tracking-widest">Ejecución / Thực hiện</span></h1>
         </div>
+        {selectedPO && (
+          <div className="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-2xl border border-blue-500/20 font-black text-xs tracking-widest">
+            {selectedPO.po_number}
+          </div>
+        )}
       </header>
 
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-widest block mb-2">Orden de Producción</label>
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32">
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Orden de Producción</label>
           <select value={selectedPO?.id ?? ''} onChange={e => {
             const po = activeOrders.find(o => o.id === Number(e.target.value)) ?? null;
             setSelectedPO(po);
-          }} className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700">
+          }} className="w-full bg-slate-800 text-white rounded-3xl px-6 py-5 text-sm border border-slate-700 outline-none focus:border-blue-500 appearance-none transition-all">
             <option value="">— Sin orden —</option>
             {activeOrders.filter(o => o.status === 'IN_PROGRESS').map(o => (
               <option key={o.id} value={o.id}>{o.po_number} · {o.article_name} · {o.sf_target} SF</option>
@@ -718,118 +829,151 @@ export default function ThanhMobile() {
           </select>
         </div>
 
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-widest block mb-2">Fórmula / Công thức</label>
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Fórmula / Công thức</label>
           <select value={selectedFormula?.id ?? ''} onChange={e => { if (e.target.value) loadFormulaLayers(Number(e.target.value)); }}
-            className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 border border-gray-700">
+            className="w-full bg-slate-800 text-white rounded-3xl px-6 py-5 text-sm border border-slate-700 outline-none focus:border-blue-500 appearance-none transition-all">
             <option value="">— Chọn công thức —</option>
             {formulas.map(f => <option key={f.id} value={f.id}>{f.name} ({f.layer_count} bước)</option>)}
           </select>
         </div>
 
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-widest block mb-2">SF producidos</label>
-          <input type="number" inputMode="decimal" value={sfProduced} onChange={e => setSfProduced(e.target.value)}
-            placeholder="Ej: 500"
-            className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 text-2xl font-bold border border-gray-700" />
+        <div className="space-y-4">
+          <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">SF Producidos</label>
+          <div className="relative">
+            <input type="number" inputMode="decimal" value={sfProduced} onChange={e => setSfProduced(e.target.value)}
+              placeholder="0.00"
+              className="w-full bg-slate-900 text-white rounded-3xl px-6 py-6 text-3xl font-black border border-slate-800 outline-none focus:border-blue-500 transition-all placeholder-slate-800" />
+            <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm">SF</span>
+          </div>
         </div>
 
         {batchLayers.length > 0 && (
-          <div>
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Cantidades reales / Lượng thực tế</p>
-            {batchLayers.map((layer, idx) => {
-              const w = wasteInfo(layer);
-              return (
-                <div key={idx} className={`rounded-xl p-4 mb-3 border ${w?.alert ? 'border-red-700 bg-red-950' : 'border-gray-700 bg-gray-800'}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="font-bold">{layer.name}</p>
-                    {w?.alert && <span className="text-red-400 text-xs font-bold flex items-center gap-1"><AlertTriangle size={14} />⚠️ {w.pct}%</span>}
-                    {w && !w.alert && <span className="text-green-400 text-xs">✓ {w.pct}%</span>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Chuẩn bị (kg)</label>
-                      <input type="number" inputMode="decimal" value={layer.qty_prepared_kg}
-                        onChange={e => setBatchLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_prepared_kg: e.target.value } : l))}
-                        placeholder="0.000" className="w-full bg-gray-700 text-white rounded-lg px-3 py-3 text-lg border border-gray-600" />
+          <div className="space-y-6 pt-4">
+            <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1">Cantidades reales / Lượng thực tế</h2>
+            <div className="space-y-6">
+              {batchLayers.map((layer, idx) => {
+                const w = wasteInfo(layer);
+                return (
+                  <div key={idx} className={`bg-slate-900/50 rounded-[2.5rem] p-8 border shadow-xl space-y-6 transition-all ${w?.alert ? 'border-rose-500/50 bg-rose-500/5' : 'border-slate-800'}`}>
+                    <div className="flex items-center justify-between">
+                      <p className="font-black text-lg tracking-tight text-slate-200">{layer.name}</p>
+                      {w?.alert && <span className="bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest flex items-center gap-1"><AlertTriangle size={12} /> ALERTA {w.pct}%</span>}
+                      {w && !w.alert && <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-[10px] font-black tracking-widest">✓ {w.pct}%</span>}
                     </div>
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">Đã dùng (kg)</label>
-                      <input type="number" inputMode="decimal" value={layer.qty_used_kg}
-                        onChange={e => setBatchLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_used_kg: e.target.value } : l))}
-                        placeholder="0.000" className="w-full bg-gray-700 text-white rounded-lg px-3 py-3 text-lg border border-gray-600" />
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Preparado (kg)</label>
+                        <input type="number" inputMode="decimal" value={layer.qty_prepared_kg}
+                          onChange={e => setBatchLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_prepared_kg: e.target.value } : l))}
+                          placeholder="0.00" className="w-full bg-slate-950 text-white rounded-2xl px-5 py-5 text-xl font-black border-2 border-slate-800 outline-none focus:border-blue-500" />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-1">Usado (kg)</label>
+                        <input type="number" inputMode="decimal" value={layer.qty_used_kg}
+                          onChange={e => setBatchLayers(ls => ls.map((l, i) => i === idx ? { ...l, qty_used_kg: e.target.value } : l))}
+                          placeholder="0.00" className="w-full bg-slate-950 text-white rounded-2xl px-5 py-5 text-xl font-black border-2 border-slate-800 outline-none focus:border-blue-500" />
+                      </div>
                     </div>
+                    {w && <p className={`text-[10px] font-bold tracking-widest uppercase text-center px-4 py-2 rounded-xl ${w.alert ? 'bg-rose-500/10 text-rose-400' : 'bg-slate-800 text-slate-500'}`}>Hao hụt: {w.waste} kg ({w.pct}%)</p>}
                   </div>
-                  {w && <p className={`text-xs mt-2 ${w.alert ? 'text-red-400' : 'text-gray-400'}`}>Hao hụt: {w.waste} kg ({w.pct}%) {w.alert ? '⚠️ > 15%' : '✓'}</p>}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      <div className="px-4 pb-6 pt-3 bg-gray-950 border-t border-gray-800">
+      <div className="fixed bottom-0 left-0 right-0 px-6 pb-10 pt-6 bg-slate-900/80 backdrop-blur-xl border-t border-slate-800/50 rounded-t-[3rem] z-20">
         {saved
-          ? <div className="flex items-center justify-center gap-2 text-green-400 py-4 font-bold text-lg"><CheckCircle size={24} /> Lô guardado ✓</div>
-          : <button onClick={submitBatch} disabled={loading || !sfProduced} className={`${btn} bg-blue-700 text-white disabled:opacity-40`}>
-              {loading ? <RefreshCw size={22} className="animate-spin" /> : <Save size={22} />}
-              Lưu Lô / Guardar Lote
+          ? <div className="flex items-center justify-center gap-3 text-emerald-400 py-4 font-black text-lg"><CheckCircle size={28} /> GUARDADO ✓</div>
+          : <button onClick={submitBatch} disabled={loading || !sfProduced} className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-2xl ${loading || !sfProduced ? 'bg-slate-800 text-slate-600' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-blue-500/20'}`}>
+              {loading ? <RefreshCw size={24} className="animate-spin" /> : <Save size={24} />}
+              <span>GUARDAR LOTE</span>
             </button>
         }
       </div>
     </div>
   );
 
-  // ══════════════════════════════════════════════════════════
-  // PACKING & MEASURING
-  // ══════════════════════════════════════════════════════════
-  return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col">
-      <header className="bg-gray-900 px-5 py-4 flex items-center gap-3 border-b border-gray-800">
-        <button onClick={() => setScreen('order-detail')} className="p-1"><ChevronLeft size={22} /></button>
-        <div>
-          <h1 className="text-xl font-bold">Đo & Đóng gói / Empacar</h1>
-          {selectedPO && <p className="text-xs text-gray-400">{selectedPO.po_number} · {selectedPO.sf_produced} SF producidos</p>}
+  if (screen === 'packing') return (
+    <div className="min-h-screen bg-[#0B0F1A] text-slate-100 flex flex-col font-sans tracking-tight">
+      <header className="bg-slate-900/50 backdrop-blur-md sticky top-0 z-10 px-6 py-6 flex items-center justify-between border-b border-slate-800/50">
+        <div className="flex items-center gap-4">
+          <button onClick={() => setScreen('order-detail')} className="p-2 bg-slate-800/50 rounded-xl border border-slate-700/50"><ChevronLeft size={24} /></button>
+          <h1 className="text-xl font-black tracking-tight leading-tight">Medición & Empaque<br/><span className="text-sm text-slate-400 font-bold uppercase tracking-widest">Đo & Đóng gói</span></h1>
         </div>
-      </header>
-
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-5">
-        <div className="bg-gray-800 rounded-xl p-4 border border-gray-700 space-y-2">
-          <p className="text-xs text-gray-400 uppercase tracking-widest">Artículo</p>
-          <p className="font-bold text-lg">{selectedPO?.article_name ?? '—'}</p>
-          <p className="text-sm text-gray-400">SF producidos: <span className="text-yellow-400 font-bold">{selectedPO?.sf_produced ?? 0}</span></p>
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-widest block mb-2">SF reales empacados / Measured SF</label>
-          <input type="number" inputMode="decimal" value={sfPacked} onChange={e => setSfPacked(e.target.value)}
-            placeholder="SF medidos"
-            className="w-full bg-gray-800 text-white rounded-xl px-4 py-4 text-2xl font-bold border border-gray-700" />
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-400 uppercase tracking-widest block mb-2">Empacado por</label>
-          <input value={packedBy} onChange={e => setPackedBy(e.target.value)}
-            placeholder="Nombre"
-            className="w-full bg-gray-800 text-white rounded-xl px-4 py-3 border border-gray-700" />
-        </div>
-
-        {sfPacked && selectedPO?.sf_produced && (
-          <div className={`rounded-xl p-4 border ${Math.abs(parseFloat(sfPacked) - selectedPO.sf_produced) / selectedPO.sf_produced > 0.05 ? 'border-yellow-700 bg-yellow-950' : 'border-green-700 bg-green-950'}`}>
-            <p className="text-sm font-bold">
-              Diferencia: {(parseFloat(sfPacked) - (selectedPO?.sf_produced ?? 0)).toFixed(1)} SF
-              ({(((parseFloat(sfPacked) - (selectedPO?.sf_produced ?? 0)) / (selectedPO?.sf_produced ?? 1)) * 100).toFixed(1)}%)
-            </p>
+        {selectedPO && (
+          <div className="bg-purple-500/10 text-purple-400 px-4 py-2 rounded-2xl border border-purple-500/20 font-black text-xs tracking-widest">
+            {selectedPO.po_number}
           </div>
         )}
+      </header>
+
+      <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 pb-32">
+        <div className="bg-slate-900/50 rounded-[2.5rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/5 blur-[80px] rounded-full"></div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Artículo / Mặt hàng</span>
+              <span className="font-black text-slate-200">{selectedPO?.article_name ?? '—'}</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Producido / Đã sản xuất</p>
+                <p className="text-4xl font-black tracking-tighter text-purple-400">{selectedPO?.sf_produced ?? 0} <span className="text-sm text-slate-500">SF</span></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="space-y-4">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+              <Maximize size={14} className="text-purple-500" /> SF Reales Empacados / SF thực tế
+            </label>
+            <div className="relative">
+              <input type="number" inputMode="decimal" value={sfPacked} onChange={e => setSfPacked(e.target.value)}
+                placeholder="0.0"
+                className="w-full bg-slate-900 text-white rounded-3xl px-6 py-6 text-4xl font-black border border-slate-800 outline-none focus:border-purple-500 transition-all placeholder-slate-800" />
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-500 font-black text-sm">SF</span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] px-1 flex items-center gap-2">
+              <User size={14} className="text-purple-500" /> Empacado por / Người đóng gói
+            </label>
+            <input value={packedBy} onChange={e => setPackedBy(e.target.value)}
+              placeholder="Nombre"
+              className={inputBase} />
+          </div>
+
+          {sfPacked && selectedPO?.sf_produced && (
+            <div className={`rounded-[2rem] p-6 border transition-all ${Math.abs(parseFloat(sfPacked) - selectedPO.sf_produced) / selectedPO.sf_produced > 0.05 ? 'bg-amber-500/10 border-amber-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-2xl ${Math.abs(parseFloat(sfPacked) - selectedPO.sf_produced) / selectedPO.sf_produced > 0.05 ? 'bg-amber-500/20 text-amber-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
+                  {Math.abs(parseFloat(sfPacked) - selectedPO.sf_produced) / selectedPO.sf_produced > 0.05 ? <AlertTriangle size={24} /> : <CheckCircle size={24} />}
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Diferencia de Medición</p>
+                  <p className={`text-lg font-black ${(parseFloat(sfPacked) - selectedPO.sf_produced) < 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {(parseFloat(sfPacked) - (selectedPO?.sf_produced ?? 0)).toFixed(1)} SF
+                    <span className="text-sm ml-2 opacity-60">({(((parseFloat(sfPacked) - (selectedPO?.sf_produced ?? 0)) / (selectedPO?.sf_produced ?? 1)) * 100).toFixed(1)}%)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="px-4 pb-6 pt-3 bg-gray-950 border-t border-gray-800">
+      <div className="fixed bottom-0 left-0 right-0 px-6 pb-10 pt-6 bg-slate-900/80 backdrop-blur-xl border-t border-slate-800/50 rounded-t-[3rem] z-20">
         {saved
-          ? <div className="flex items-center justify-center gap-2 text-green-400 py-4 font-bold text-lg"><CheckCircle size={24} /> PO cerrada ✓</div>
-          : <button onClick={completePacking} disabled={loading || !sfPacked} className={`${btn} bg-purple-700 text-white disabled:opacity-40`}>
-              {loading ? <RefreshCw size={22} className="animate-spin" /> : <Warehouse size={22} />}
-              Confirmar empaque / Đóng gói xong
+          ? <div className="flex items-center justify-center gap-3 text-emerald-400 py-4 font-black text-lg"><CheckCircle size={28} /> PO CERRADA ✓</div>
+          : <button onClick={completePacking} disabled={loading || !sfPacked} className={`w-full py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-4 active:scale-95 transition-all shadow-2xl ${loading || !sfPacked ? 'bg-slate-800 text-slate-600' : 'bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-purple-500/20'}`}>
+              {loading ? <RefreshCw size={24} className="animate-spin" /> : <Warehouse size={24} />}
+              <span>CONFIRMAR EMPAQUE</span>
             </button>
         }
       </div>
