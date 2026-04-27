@@ -1,41 +1,45 @@
 # 🚀 Serendipity Anthropos OS - Integration Status Report
 
-**Fecha Actualización**: 2026-04-23
-**Estado**: Fase 2 Finalizada - Google Sheets Sync & Finance Migration Exitosa
+**Fecha Actualización**: 2026-04-26
+**Estado**: Fase 3, 4 y 5 (MES & Recipe Designer) - **INTEGRACIÓN EXITOSA**
 
 ---
 
-## ✅ Completado hoy (Sesión 23-Abr)
+## ✅ Completado (Sesión 26-Abr)
 
-### 1. Sincronización Google Sheets (Live Tracker)
-- **Service Account**: Configurada y validada con permisos de Editor.
-- **Sync Engine**: El endpoint `/api/serendipity/sheets/sync` ahora procesa correctamente la pestaña **"BULK"** del tracker de Santiago.
-- **Integración Postgres**: Las órdenes se guardan automáticamente en la tabla local usando lógica de *upsert* (po_client como llave única).
+### 1. Sistema MES & Laboratorio (Fases 3-5)
+- **Recipe Designer 2.0**: Implementada la grilla dinámica de procesos (columnas) y químicos (filas).
+- **Scaling Engine**: Motor de escalado automático de mezclas basado en SF (Pies Cuadrados) con soporte para pérdidas y mermas.
+- **Dual-Read Logic**: El sistema ahora es compatible tanto con las fórmulas legacy como con las nuevas recetas moleculares del Lab.
+- **Mobile Execution**: Interfaz optimizada para laboratorio (`/lab/mobile`) para el registro de lotes (Batches) y pesaje en tiempo real.
 
-### 2. Migración Total de Finanzas
-- **PostgreSQL Core**: El `FinanceService` ahora consulta directamente las tablas `finances_state` y `transactions`.
-- **Independencia de Supabase**: Se ha eliminado el último vínculo con Supabase en el módulo financiero.
-- **API Architecture**: Implementación de `/api/serendipity/finance` para desacoplar el frontend del acceso directo a DB, resolviendo errores de compilación en Vercel.
+### 2. Estabilidad de Despliegue (Vercel)
+- **Fix Build Failure**: Resueltos errores críticos de compilación en Vercel causados por la migración de `pdf-parse` a ESM y tipos incorrectos en iconos de Lucide.
+- **Sync de Dependencias**: Instalación y validación de `@anthropic-ai/sdk` y `papaparse` para el motor de importación.
+- **Build Status**: Despliegue en producción verificado y estable (No más "Red X" en GitHub).
 
-### 3. Estabilidad y Despliegue
-- **Vercel Build Fix**: Corregidos errores de tipos y de importaciones de servidor en componentes de cliente. El proyecto ahora compila y despliega correctamente.
-- **SQL Migration**: Archivo `sql/phase2_finance_and_sheets.sql` generado con toda la estructura necesaria para producción.
+### 3. PostgreSQL Core Update
+- **Schema Migration**: Aplicados los scripts `sql/phase3_mes_schema.sql`, `sql/phase4_inventory_and_purchasing.sql` y `sql/phase5_recipe_designer.sql`.
+- **Chemicals Seed**: Catálogo inicial de químicos configurado y validado en la base de datos local.
+- **Inventory Automation**: Los movimientos de stock ahora se registran automáticamente al cerrar lotes de producción.
 
 ---
 
 ## 📂 Estructura de Datos Unificada
-- **Base de Datos**: PostgreSQL Local/VPS (Tablas: `GoogleUsers`, `Orders`, `QrScans`, `OrderStatusHistory`, `finances_state`, `transactions`).
-- **Google Drive**: [Serendipity Operation Root](https://drive.google.com/drive/folders/1Sl5qHb19RqVcfJWiTvLJV9-XzyMSlMLk)
-- **Trackers**:
-    - [Orders Live Tracker](https://docs.google.com/spreadsheets/d/15t8d5Crgdgbh-qld6-hVCXTUqPuVSPThiisJm4KXON0/edit) (Pestaña: BULK)
+- **Base de Datos**: PostgreSQL (Tablas: `chemicals`, `articles`, `recipe_formulas`, `recipe_processes`, `recipe_lines`, `batches`, `production_orders`, `purchase_requests`).
+- **Nuevos Endpoints**:
+    - `/api/recipe/formulas`: Gestión del diseñador de recetas.
+    - `/api/lab/import/invoice`: Procesamiento de facturas con Claude AI.
+    - `/api/lab/scale`: Motor de simulación de consumo.
 
 ---
 
-## ⏳ Pendientes (Santi / Sofía en VPS)
-1. **Ejecutar SQL**: Santiago debe aplicar `sql/phase2_finance_and_sheets.sql` en el servidor de producción.
-2. **Variables VPS**: Configurar las credenciales de Google Service Account y la URL de la base de datos en el entorno del VPS.
-3. **Validación**: Verificar que los gráficos financieros muestren la data real una vez el VPS esté actualizado.
+## ⏳ Pendientes (Santi / Sofía)
+1. **API Keys**: Configurar `ANTHROPIC_API_KEY` en Vercel para habilitar el extractor de facturas inteligente.
+2. **Phase 5 Legacy Deprecation**: Ejecutar `sql/phase5_legacy_deprecation.sql` solo después de que Thanh haya migrado todas las fórmulas activas al nuevo Recipe Designer.
+3. **Validación en Planta**: Probar el pesaje de químicos desde un dispositivo móvil en el laboratorio de Thanh.
 
 ---
-*“Soberanía técnica total. El sistema opera de forma autónoma integrando la Verdad Molecular de Google Sheets con la robustez de PostgreSQL. Despliegue en Vercel estabilizado.”*
-*Reporte de cierre de Fase 2 por Antigravity*
+*“Soberanía técnica alcanzada. El laboratorio ahora habla el mismo lenguaje que el sistema financiero y de órdenes. El núcleo molecular de Serendipity está operativo.”*
+*Reporte de cierre de Fase de Integración MES por Antigravity*
+
