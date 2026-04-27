@@ -103,10 +103,10 @@ function UserAvatar({ name }: { name: string }) {
 
     return (
         <div className={cn(
-            'w-10 h-10 rounded-full flex items-center justify-center shadow-md border-2 border-transparent group-hover:border-[var(--climate-primary)] transition-all overflow-hidden',
+            'w-full h-full rounded-full flex items-center justify-center shadow-md transition-all overflow-hidden',
             bgColor
         )}>
-            <span className="text-white text-xs font-black tracking-tight">{initials}</span>
+            <span className="text-white text-[10px] sm:text-xs font-black tracking-tight leading-none text-center block w-full">{initials}</span>
         </div>
     )
 }
@@ -402,7 +402,7 @@ export default function MobileLabPage() {
                 {/* User Avatar */}
                 <button 
                     onClick={() => setIsProfileOpen(!isProfileOpen)}
-                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border-2 border-transparent hover:border-blue-500/50 transition-all active:scale-95 shadow-sm shrink-0"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full overflow-hidden border border-[var(--border)] hover:border-blue-500/50 transition-all active:scale-95 shadow-sm shrink-0 flex items-center justify-center"
                 >
                     <UserAvatar name={user?.name || 'User'} />
                 </button>
