@@ -417,7 +417,7 @@ export default function MobileLabPage() {
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="absolute right-4 top-16 w-56 apple-blur border border-[var(--border)] rounded-[20px] shadow-2xl z-50 overflow-hidden p-1.5"
+                            className="absolute right-4 top-16 w-56 bg-[var(--card)] border border-[var(--border)] rounded-[20px] shadow-2xl z-50 overflow-hidden p-1.5"
                         >
                             <div className="px-3 py-2.5 mb-1 flex items-center gap-3 border-b border-[var(--border)]/50">
                                 <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-500/10 flex items-center justify-center text-blue-500 text-[10px] font-black">
