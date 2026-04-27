@@ -35,7 +35,9 @@ import {
     Plus,
     Warehouse,
     ArrowRight,
-    ArrowLeft
+    ArrowLeft,
+    Info,
+    TrendingUp
 } from 'lucide-react'
 import { Card, Badge, Button, Skeleton, Input, EmptyState, StatCardSkeleton } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
@@ -55,6 +57,7 @@ interface FormulaLayer {
 interface ProductionOrder {
     id: number; po_number: string; sf_target: number; sf_produced: number; sf_packed: number;
     status: string; article_name: string; article_code: string; formula_name: string;
+    formula_id?: number;
     owner: string; assigned_to: string; inventory_ok: boolean | null;
 }
 interface PurchaseRequest {
@@ -158,7 +161,9 @@ export default function MobileLabPage() {
 
     // Batch
     const [sfProduced, setSfProduced] = useState('');
-    const [batchLayers, setBatchLayers] = useState<BatchLayer[]>([]);
+    const [manualCustomer, setManualCustomer] = useState('');
+    const [manualProduct, setManualProduct] = useState('');
+    const [batchLayers, setBatchLayers] = useState<any[]>([]);
 
     // Packing
     const [sfPacked, setSfPacked] = useState('');
@@ -237,7 +242,10 @@ export default function MobileLabPage() {
     }
 
     async function submitBatch() {
-        if (!sfProduced) return;
+        if (!sfProduced && (!manualCustomer || !manualProduct)) {
+            addNotification('Complete los campos requeridos', 'warning');
+            return;
+        }
         setLoading(true);
         try {
             const res = await fetch('/api/batches', {
@@ -248,8 +256,15 @@ export default function MobileLabPage() {
                     formula_id: selectedFormula?.id ?? null,
                     sf_produced: parseFloat(sfProduced),
                     owner,
+                    executed_by: user?.name || 'Thanh',
+                    customer: selectedPO ? null : manualCustomer,
+                    product: selectedPO ? null : manualProduct,
+                    quantity: selectedPO ? null : parseFloat(sfProduced),
                     layers: batchLayers.map(l => ({
-                        ...l,
+                        layer_id: l.layer_id || l.id,
+                        layer_order: l.layer_order,
+                        layer_type: l.layer_type,
+                        chemical_id: l.chemical_id,
                         qty_prepared_kg: parseFloat(l.qty_prepared_kg) || null,
                         qty_used_kg: parseFloat(l.qty_used_kg) || null,
                     })),
@@ -259,8 +274,22 @@ export default function MobileLabPage() {
                 // Background sync
                 fetch('/api/sheets/sync', { method: 'POST' }).catch(() => { });
                 setSaved(true);
-                setTimeout(() => { setSaved(false); setScreen('home'); load(); }, 2000);
+                addNotification('Lote creado y sincronizado con Dashboard', 'success');
+                setTimeout(() => { 
+                    setSaved(false); 
+                    setScreen('home'); 
+                    setSelectedPO(null);
+                    setManualCustomer('');
+                    setManualProduct('');
+                    setSfProduced('');
+                    load(); 
+                }, 2000);
+            } else {
+                const err = await res.json();
+                addNotification(err.error || 'Error al guardar', 'warning');
             }
+        } catch (e) {
+            addNotification('Error de conexión', 'warning');
         } finally {
             setLoading(false);
         }
@@ -1004,18 +1033,46 @@ export default function MobileLabPage() {
                     <select 
                         value={selectedPO?.id ?? ''} 
                         onChange={e => {
-                            const po = activeOrders.find(o => o.id === Number(e.target.value)) ?? null;
+                            const val = e.target.value;
+                            if (!val) {
+                                setSelectedPO(null);
+                                return;
+                            }
+                            const po = activeOrders.find(o => o.id === Number(val)) ?? null;
                             setSelectedPO(po);
-                            if (po?.formula_name) loadFormulaLayers(po.id);
+                            if (po?.formula_id) loadFormulaLayers(po.formula_id);
                         }}
                         className="w-full h-12 rounded-xl bg-[var(--secondary)]/50 border-none ring-1 ring-[var(--border)] px-4 text-sm font-bold appearance-none outline-none focus:ring-2 ring-blue-500/50 transition-all"
                     >
-                        <option value="">— Seleccionar Orden —</option>
-                        {activeOrders.filter(o => o.status === 'IN_PROGRESS').map(o => (
+                        <option value="">— Lote Manual / Nuevo —</option>
+                        {activeOrders.filter(o => o.status === 'PENDING' || o.status === 'IN_PROGRESS').map(o => (
                             <option key={o.id} value={o.id}>{o.po_number} · {o.article_name}</option>
                         ))}
                     </select>
                 </div>
+
+                {!selectedPO && (
+                    <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 px-1">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Referencia / Cliente</label>
+                            <Input 
+                                value={manualCustomer}
+                                onChange={e => setManualCustomer(e.target.value)}
+                                placeholder="Ej: OPUS / Adidas"
+                                className="h-12 bg-[var(--secondary)]/50 border-none ring-1 ring-[var(--border)] font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Descripción del Producto</label>
+                            <Input 
+                                value={manualProduct}
+                                onChange={e => setManualProduct(e.target.value)}
+                                placeholder="Ej: Napa Premium Black"
+                                className="h-12 bg-[var(--secondary)]/50 border-none ring-1 ring-[var(--border)] font-bold"
+                            />
+                        </div>
+                    </motion.div>
+                )}
 
                 <div className="space-y-2 px-1">
                     <label className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">Fórmula de Mezcla</label>
