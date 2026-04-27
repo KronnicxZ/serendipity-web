@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Beaker, Layers, Save, RefreshCw, ChevronRight, ChevronLeft,
   Plus, AlertTriangle, CheckCircle, Package, ClipboardList,
-  Warehouse, ShoppingCart, Play, BoxSelect, Maximize, User
+  Warehouse, ShoppingCart, Play, BoxSelect, Maximize, User, PlayCircle
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────
