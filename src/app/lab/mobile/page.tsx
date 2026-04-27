@@ -113,7 +113,8 @@ function UserAvatar({ name }: { name: string }) {
 
 export default function MobileLabPage() {
     const { t, language, setLanguage } = useTranslation();
-    const { user, logout } = useAuth();
+    const { user: authUser, logout } = useAuth();
+    const [user, setUser] = useState<{name: string, role: string} | null>({ name: authUser?.name || 'User', role: 'ADMIN' });
     const [screen, setScreen] = useState<Screen>('home');
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [formulas, setFormulas] = useState<Formula[]>([]);
@@ -127,6 +128,21 @@ export default function MobileLabPage() {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [owner, setOwner] = useState<'Serendipity' | 'PRARA'>('Serendipity');
+    const [notifications, setNotifications] = useState<{id: string, text: string, type: 'success' | 'info' | 'warning'}[]>([]);
+
+    const addNotification = (text: string, type: 'success' | 'info' | 'warning' = 'info') => {
+        const id = Math.random().toString(36).substr(2, 9);
+        setNotifications(prev => [...prev, { id, text, type }]);
+        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+    };
+
+    // Role simulation
+    const roles = ['ADMIN', 'TECHNICIAN', 'MSP', 'SIMULATOR'];
+    const switchRole = (role: string) => {
+        setUser(prev => prev ? { ...prev, role } : null);
+        addNotification(`Cambiado a rol: ${role}`, 'info');
+        setIsProfileOpen(false);
+    };
 
     // Selected PO context
     const [selectedPO, setSelectedPO] = useState<ProductionOrder | null>(null);
@@ -182,6 +198,7 @@ export default function MobileLabPage() {
             setActiveOrders(await aoRes.json());
             setAllOrders(await allRes.json());
             setPurchaseReqs(await prRes.json());
+            addNotification('Datos actualizados correctamente', 'success');
         } catch (e) {
             console.error("Error loading lab data", e);
         } finally {
@@ -306,7 +323,61 @@ export default function MobileLabPage() {
 
     const currentLang = LANGUAGES.find(l => l.code === language) || LANGUAGES[0];
 
-    // ── Components ──────────────────────────────────────────
+    const NotificationSystem = () => (
+        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] w-[calc(100%-32px)] max-w-sm pointer-events-none space-y-2">
+            <AnimatePresence>
+                {notifications.map(n => (
+                    <motion.div
+                        key={n.id}
+                        initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className={cn(
+                            "p-3 rounded-2xl shadow-xl border flex items-center gap-3 apple-blur pointer-events-auto",
+                            n.type === 'success' ? "border-emerald-500/30 text-emerald-600 bg-emerald-500/5" :
+                            n.type === 'warning' ? "border-amber-500/30 text-amber-600 bg-amber-500/5" :
+                            "border-blue-500/30 text-blue-600 bg-blue-500/5"
+                        )}
+                    >
+                        {n.type === 'success' ? <CheckCircle2 size={16} /> : n.type === 'warning' ? <AlertTriangle size={16} /> : <Info size={16} />}
+                        <span className="text-[10px] font-bold uppercase tracking-wider">{n.text}</span>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+        </div>
+    );
+
+    const TrendChart = () => (
+        <div className="h-28 w-full mt-4 relative overflow-hidden">
+            <svg className="w-full h-full overflow-visible" viewBox="0 0 400 100" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--climate-primary)" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="var(--climate-primary)" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <motion.path
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 2, ease: "easeInOut" }}
+                    d="M 0 80 Q 50 20 100 60 T 200 40 T 300 70 T 400 30"
+                    fill="none"
+                    stroke="var(--climate-primary)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                />
+                <path
+                    d="M 0 80 Q 50 20 100 60 T 200 40 T 300 70 T 400 30 V 100 H 0 Z"
+                    fill="url(#chartGradient)"
+                />
+            </svg>
+            <div className="absolute bottom-0 left-0 right-0 flex justify-between px-2">
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => (
+                    <span key={d} className="text-[8px] font-bold text-[var(--muted-foreground)]">{d}</span>
+                ))}
+            </div>
+        </div>
+    );
 
     const Header = ({ title, showBack = false, onBack = () => setScreen('home') }: { title: string, showBack?: boolean, onBack?: () => void }) => (
         <header className="fixed top-0 left-0 right-0 h-16 sm:h-20 apple-blur border-b border-[var(--border)] z-[60] px-3 sm:px-4 flex items-center justify-between transition-all duration-300">
@@ -334,7 +405,7 @@ export default function MobileLabPage() {
                 <Button variant="ghost" size="icon" onClick={load} disabled={loading} className="!rounded-full border border-[var(--border)] bg-[var(--card)] w-8 h-8 sm:w-9 sm:h-9 shadow-sm shrink-0">
                     <RefreshCw size={16} className={cn(loading && "animate-spin text-blue-500")} />
                 </Button>
-...
+
                 {/* Owner Toggle */}
                 <button
                     onClick={() => setOwner(o => o === 'Serendipity' ? 'PRARA' : 'Serendipity')}
@@ -428,7 +499,24 @@ export default function MobileLabPage() {
                                     <p className="text-[8px] font-bold uppercase text-[var(--muted-foreground)] tracking-widest mt-1">{user?.role}</p>
                                 </div>
                             </div>
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 max-h-[250px] overflow-y-auto custom-scrollbar">
+                                <div className="px-3 py-1.5 text-[8px] font-black text-[var(--muted-foreground)] uppercase tracking-widest border-b border-[var(--border)]/30 mb-1">
+                                    Cambiar Rol
+                                </div>
+                                {roles.map(r => (
+                                    <button 
+                                        key={r}
+                                        onClick={() => switchRole(r)}
+                                        className={cn(
+                                            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[9px] font-bold transition-all",
+                                            user?.role === r ? "bg-blue-500/10 text-blue-600" : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)]"
+                                        )}
+                                    >
+                                        {r}
+                                        {user?.role === r && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
+                                    </button>
+                                ))}
+                                <div className="h-2" />
                                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[10px] font-bold text-[var(--muted-foreground)] hover:bg-blue-500/5 hover:text-blue-500 transition-all">
                                     <Settings size={14} />
                                     {t('common.accountSettings')}
@@ -502,6 +590,27 @@ export default function MobileLabPage() {
                     </Card>
                 </div>
             </section>
+
+            {/* Role specific view: Admin/MSP/Simulator */}
+            {(user?.role === 'ADMIN' || user?.role === 'MSP' || user?.role === 'SIMULATOR') && (
+                <Card className={cn(
+                    "p-5 border-none relative overflow-hidden group shadow-xl animate-in fade-in slide-in-from-bottom-4",
+                    "bg-gradient-to-br from-[var(--card)] to-[var(--secondary)]"
+                )}>
+                    <div className="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-1">
+                                Rendimiento Semanal
+                            </h3>
+                            <p className="text-xl font-bold font-outfit">+12.5% vs semana anterior</p>
+                        </div>
+                        <div className="p-2 rounded-full bg-blue-500/10 text-blue-600">
+                            <TrendingUp size={16} />
+                        </div>
+                    </div>
+                    <TrendChart />
+                </Card>
+            )}
 
             <section className="grid grid-cols-1 gap-4">
                 <Button onClick={() => setScreen('batch')} variant="primary" className="h-16 rounded-3xl text-lg flex items-center justify-center gap-3 shadow-xl shadow-blue-600/20 border border-blue-400/20 font-outfit active:scale-95 transition-transform">
@@ -1202,6 +1311,7 @@ export default function MobileLabPage() {
 
     return (
         <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] selection:bg-blue-500/30 overflow-x-hidden transition-colors duration-500">
+            <NotificationSystem />
             <Header {...config} />
 
             <main className="p-4 sm:p-6 pt-20 sm:pt-24 pb-44 max-w-lg mx-auto relative z-10">
