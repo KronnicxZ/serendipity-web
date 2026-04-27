@@ -162,6 +162,28 @@ export default function MobileLabPage() {
 
     // ── Screens ──────────────────────────────────────────────
 
+    const StatCardSkeleton = () => (
+        <Card glass className="p-5 border-none ring-1 ring-[var(--border)] bg-[var(--card)] animate-pulse">
+            <div className="flex justify-between items-start">
+                <div className="space-y-3 w-full">
+                    <div className="flex items-center gap-2">
+                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-5 w-20" />
+                    </div>
+                    <Skeleton className="h-6 w-3/4" />
+                </div>
+                <Skeleton className="h-10 w-10 rounded-xl" />
+            </div>
+            <div className="mt-8 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-4 w-12" />
+                    <Skeleton className="h-4 w-12" />
+                </div>
+                <Skeleton className="h-5 w-5 rounded-full" />
+            </div>
+        </Card>
+    );
+
     const HomeScreen = () => (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <section className="space-y-6">
