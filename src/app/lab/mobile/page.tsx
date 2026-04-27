@@ -1194,7 +1194,7 @@ export default function MobileLabPage() {
             case 'inventory-check': return { title: 'INVENTARIO', showBack: true, onBack: () => setScreen('order-detail') };
             case 'purchase-requests': return { title: 'STOCK REQUERIDO', showBack: true };
             case 'packing': return { title: 'FINALIZAR PRODUCCIÓN', showBack: true, onBack: () => setScreen('order-detail') };
-            default: return { title: screen.toUpperCase(), showBack: true };
+            default: return { title: String(screen).toUpperCase(), showBack: true };
         }
     }
 
