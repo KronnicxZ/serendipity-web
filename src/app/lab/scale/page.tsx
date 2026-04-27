@@ -273,7 +273,7 @@ export default function ScalePage() {
                             <td className="p-3 text-right font-mono text-slate-400">${line.cost.toFixed(4)}</td>
                             <td className="p-3 text-center">
                               {line.shortage
-                                ? <AlertTriangle size={16} className="text-amber-500 mx-auto" title={`Stock: ${line.stock_kg} kg`} />
+                                ? <span title={`Stock: ${line.stock_kg} kg`}><AlertTriangle size={16} className="text-amber-500 mx-auto" /></span>
                                 : <CheckCircle2 size={16} className="text-emerald-500 mx-auto opacity-50" />}
                             </td>
                           </tr>

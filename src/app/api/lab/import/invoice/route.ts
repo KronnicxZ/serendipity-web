@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import pdfParse from 'pdf-parse';
+import { PDFParse } from 'pdf-parse';
 import { pool } from '@/lib/db';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -53,9 +53,12 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await file.arrayBuffer());
     let pdfText = '';
     try {
-      const parsed = await pdfParse(buffer);
+      const parser = new PDFParse({ data: buffer });
+      const parsed = await parser.getText();
       pdfText = parsed.text;
-    } catch {
+      await parser.destroy();
+    } catch (err) {
+      console.error('PDF Parse error:', err);
       return NextResponse.json({ error: 'Could not parse PDF' }, { status: 400 });
     }
 
