@@ -317,7 +317,7 @@ export default function MobileLabPage() {
                     </Button>
                 ) : (
                     <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-600/30 shrink-0">
-                        <Activity size={16} sm:size={20} strokeWidth={2.5} />
+                        <Activity size={18} strokeWidth={2.5} />
                     </div>
                 )}
                 <div className="flex flex-col min-w-0">
@@ -332,7 +332,7 @@ export default function MobileLabPage() {
             <div className="flex items-center gap-1.5 sm:gap-2">
                 {/* Sync Button */}
                 <Button variant="ghost" size="icon" onClick={load} disabled={loading} className="!rounded-full border border-[var(--border)] bg-[var(--card)] w-8 h-8 sm:w-9 sm:h-9 shadow-sm shrink-0">
-                    <RefreshCw size={14} sm:size={16} className={cn(loading && "animate-spin text-blue-500")} />
+                    <RefreshCw size={16} className={cn(loading && "animate-spin text-blue-500")} />
                 </Button>
 ...
                 {/* Owner Toggle */}
