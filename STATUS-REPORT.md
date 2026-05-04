@@ -34,12 +34,24 @@
 
 ---
 
-## ⏳ Pendientes (Santi / Sofía)
-1. **API Keys**: Configurar `ANTHROPIC_API_KEY` en Vercel para habilitar el extractor de facturas inteligente.
-2. **Phase 5 Legacy Deprecation**: Ejecutar `sql/phase5_legacy_deprecation.sql` solo después de que Thanh haya migrado todas las fórmulas activas al nuevo Recipe Designer.
-3. **Validación en Planta**: Probar el pesaje de químicos desde un dispositivo móvil en el laboratorio de Thanh.
+## ✅ Actualización Final (27-Abr): Integración Lab-Dashboard & Operatividad
+**Estado**: **LISTO PARA PRODUCCIÓN**
+
+### 1. Integración Total "Lab to Garden"
+- **Sincronización en Tiempo Real**: Se ha cerrado el ciclo entre la App Móvil de Lab (`/lab/mobile`) y el Dashboard de Operaciones (**Jardín de Datos**).
+- **Lotes Manuales**: Implementada la creación de lotes ad-hoc (Cliente/Producto) desde el móvil que se registran automáticamente como órdenes activas en el dashboard.
+- **Auto-Update de Estados**: Al iniciar un lote en el laboratorio, la orden vinculada cambia automáticamente a estado **"En Proceso" (Ámbar)** en la vista de gestión de Santiago.
+- **Flujo de QR**: Cada lote creado en el laboratorio está disponible instantáneamente en el dashboard para la **impresión de su código QR** físico.
+
+### 2. Estabilidad & Despliegue
+- **Fix Build Errors**: Resueltos los fallos de despliegue en Vercel relacionados con importaciones de iconos (`Info`, `TrendingUp`) y tipado de interfaces (`ProductionOrder`).
+- **Build Status**: **SUCCESS**. El repositorio compila y despliega correctamente.
+
+### 3. Tareas para Santiago y Sofía (Validación)
+1. **Validación de DB Local**: Confirmar que las tablas `"Orders"`, `production_orders` y `batches` están recibiendo los datos sincronizados desde el API.
+2. **Prueba de Impresión**: Verificar que los nuevos lotes creados desde el móvil permiten la apertura del modal de QR en el dashboard sin errores.
+3. **Google Sheets Sync**: Monitorear que la integración de Sophia (`/api/sheets/sync`) refleje los nuevos lotes creados manualmente.
 
 ---
-*“Soberanía técnica alcanzada. El laboratorio ahora habla el mismo lenguaje que el sistema financiero y de órdenes. El núcleo molecular de Serendipity está operativo.”*
-*Reporte de cierre de Fase de Integración MES por Antigravity*
-
+*“Ciclo operativo cerrado. Del laboratorio al dashboard, Serendipity ahora rastrea cada SF de piel en tiempo real. Listos para la validación final en planta.”*
+*Reporte de Integración Final por Antigravity*
