@@ -117,7 +117,8 @@ function UserAvatar({ name }: { name: string }) {
 export default function MobileLabPage() {
     const { t, language, setLanguage } = useTranslation();
     const { user: authUser, logout } = useAuth();
-    const [user, setUser] = useState<{name: string, role: string} | null>({ name: authUser?.name || 'User', role: 'ADMIN' });
+    // Derive display user directly from auth context — no hardcoded role
+    const user = authUser ? { name: authUser.name, role: authUser.role } : { name: 'User', role: 'OPERATIVO' };
     const [screen, setScreen] = useState<Screen>('home');
     const [chemicals, setChemicals] = useState<Chemical[]>([]);
     const [formulas, setFormulas] = useState<Formula[]>([]);
@@ -139,13 +140,7 @@ export default function MobileLabPage() {
         setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
     };
 
-    // Role simulation
-    const roles = ['ADMIN', 'TECHNICIAN', 'MSP', 'SIMULATOR'];
-    const switchRole = (role: string) => {
-        setUser(prev => prev ? { ...prev, role } : null);
-        addNotification(`Cambiado a rol: ${role}`, 'info');
-        setIsProfileOpen(false);
-    };
+    // Role is always the real role from the DB — no simulation needed
 
     // Selected PO context
     const [selectedPO, setSelectedPO] = useState<ProductionOrder | null>(null);
@@ -528,23 +523,7 @@ export default function MobileLabPage() {
                                     <p className="text-[8px] font-bold uppercase text-[var(--muted-foreground)] tracking-widest mt-1">{user?.role}</p>
                                 </div>
                             </div>
-                            <div className="space-y-0.5 max-h-[250px] overflow-y-auto custom-scrollbar">
-                                <div className="px-3 py-1.5 text-[8px] font-black text-[var(--muted-foreground)] uppercase tracking-widest border-b border-[var(--border)]/30 mb-1">
-                                    Cambiar Rol
-                                </div>
-                                {roles.map(r => (
-                                    <button 
-                                        key={r}
-                                        onClick={() => switchRole(r)}
-                                        className={cn(
-                                            "w-full flex items-center justify-between px-3 py-2 rounded-lg text-[9px] font-bold transition-all",
-                                            user?.role === r ? "bg-blue-500/10 text-blue-600" : "text-[var(--muted-foreground)] hover:bg-[var(--secondary)]"
-                                        )}
-                                    >
-                                        {r}
-                                        {user?.role === r && <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />}
-                                    </button>
-                                ))}
+                            <div className="space-y-0.5">
                                 <div className="h-2" />
                                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[10px] font-bold text-[var(--muted-foreground)] hover:bg-blue-500/5 hover:text-blue-500 transition-all">
                                     <Settings size={14} />
