@@ -1,0 +1,162 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  host: 'localhost', port: 5432, database: 'sofia',
+  user: 'postgres', password: 'Abundancia2026',
+})
+
+const TARGET_MONTH_SF = 150000
+
+function generateInsight(blocked: number, blockedSf: number, overdueCount: number, overdueUsd: number, sfToday: number, sfMonth: number): string {
+  if (blocked > 0 && overdueCount > 0) {
+    return `${blocked} order${blocked > 1 ? 's' : ''} blocked (${blockedSf.toLocaleString()} SF) + invoice overdue USD ${overdueUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}. Two critical actions required.`
+  }
+  if (blocked > 0) {
+    return `${blocked} order${blocked > 1 ? 's' : ''} cannot proceed — ${blockedSf.toLocaleString()} SF waiting for formula assignment. Contact Thuy.`
+  }
+  if (overdueCount > 0) {
+    return `${overdueCount} invoice${overdueCount > 1 ? 's' : ''} overdue — USD ${overdueUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })} pending. Follow up with PRARA.`
+  }
+  const pct = Math.round(sfMonth / TARGET_MONTH_SF * 100)
+  if (pct >= 90) return `Strong month — ${sfMonth.toLocaleString()} SF processed (${pct}% of target). On track to close.`
+  if (sfToday === 0) return `No batches recorded today yet. Circuit is clear — ${sfMonth.toLocaleString()} SF accumulated this month.`
+  return `Circuit flowing. ${sfToday.toLocaleString()} SF logged today. ${sfMonth.toLocaleString()} SF this month (${pct}% of ${TARGET_MONTH_SF.toLocaleString()} target).`
+}
+
+export async function GET(req: NextRequest) {
+  const client = await pool.connect()
+  try {
+    const today = new Date()
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
+
+    const [
+      sfTodayRes, sfMonthRes, circuitRes, financeRes, overdueRes, rolesRes, lowChemRes, depRes
+    ] = await Promise.all([
+      client.query(`
+        SELECT COALESCE(ROUND(SUM(sqft_processed)), 0) AS sf
+        FROM production_records
+        WHERE created_at >= $1
+      `, [startOfDay]),
+      client.query(`
+        SELECT COALESCE(ROUND(SUM(sqft_processed)), 0) AS sf
+        FROM production_records
+        WHERE created_at >= $1
+      `, [startOfMonth]),
+      client.query(`
+        SELECT
+          COUNT(*) FILTER (WHERE status='pending' AND recipe_formula_id IS NULL)      AS blocked,
+          COUNT(*) FILTER (WHERE status='pending' AND recipe_formula_id IS NOT NULL)  AS lab_ready,
+          COUNT(*) FILTER (WHERE status='in_progress')                                AS production,
+          COUNT(*) FILTER (WHERE status='qc')                                         AS inspection,
+          COUNT(*) FILTER (WHERE status='completed' AND invoice_generated)            AS invoiced,
+          COALESCE(ROUND(SUM(quantity_sf) FILTER (WHERE status='pending')), 0)        AS sf_pending
+        FROM production_orders
+      `),
+      client.query(`
+        SELECT
+          COALESCE(ROUND(SUM(sqft_processed * 0.22), 2), 0) AS revenue_month,
+          (SELECT COALESCE(ROUND(SUM(amount_usd), 2), 0) FROM payables WHERE status='pending') AS payables
+        FROM production_records
+        WHERE created_at >= $1
+      `, [startOfMonth]),
+      client.query(`
+        SELECT COUNT(*) AS cnt, COALESCE(SUM(total_amount), 0) AS total
+        FROM invoices WHERE status = 'OVERDUE'
+      `),
+      client.query(`
+        SELECT DISTINCT operator_name
+        FROM production_records
+        WHERE created_at >= $1 AND operator_name IS NOT NULL AND operator_name <> ''
+        ORDER BY operator_name
+      `, [startOfDay]),
+      client.query(`
+        SELECT COUNT(*) AS cnt FROM chemicals
+        WHERE is_active = true AND stock_kg > 0 AND stock_kg < 5
+      `),
+      client.query(`
+        SELECT
+          pr.client_code,
+          ROUND(SUM(pr.sqft_processed * COALESCE(cr.rate_per_sqft, 0.22))::numeric, 2) AS revenue_usd,
+          ROUND(
+            SUM(pr.sqft_processed * COALESCE(cr.rate_per_sqft, 0.22)) /
+            NULLIF(SUM(SUM(pr.sqft_processed * COALESCE(cr.rate_per_sqft, 0.22))) OVER (), 0) * 100
+          ::numeric, 1) AS pct_total
+        FROM production_records pr
+        LEFT JOIN client_rates cr ON cr.client_code = pr.client_code
+        WHERE pr.created_at >= NOW() - INTERVAL '60 days'
+        GROUP BY pr.client_code
+        ORDER BY revenue_usd DESC
+        LIMIT 5
+      `),
+    ])
+
+    const sfToday = parseFloat(sfTodayRes.rows[0]?.sf) || 0
+    const sfMonth = parseFloat(sfMonthRes.rows[0]?.sf) || 0
+    const c = circuitRes.rows[0]
+    const blocked = parseInt(c.blocked) || 0
+    const sfPending = parseFloat(c.sf_pending) || 0
+    const revenueMonth = parseFloat(financeRes.rows[0]?.revenue_month) || 0
+    const payables = parseFloat(financeRes.rows[0]?.payables) || 0
+    const overdueCount = parseInt(overdueRes.rows[0]?.cnt) || 0
+    const overdueUsd = parseFloat(overdueRes.rows[0]?.total) || 0
+    const operatorsToday = rolesRes.rows.length
+    const lowChemCount = parseInt(lowChemRes.rows[0]?.cnt) || 0
+    const depClients = depRes.rows.map((r: { client_code: string; revenue_usd: string; pct_total: string }) => ({
+      client: r.client_code,
+      revenue: parseFloat(r.revenue_usd),
+      pct: parseFloat(r.pct_total),
+    }))
+    const topClient = depClients[0] || null
+    const depAlert = topClient && topClient.pct > 70
+
+    const progressPct = Math.min(100, Math.round(sfMonth / TARGET_MONTH_SF * 100))
+
+    let status: 'ALL_CLEAR' | 'ATTENTION' | 'CRITICAL' = 'ALL_CLEAR'
+    if (blocked > 0 || overdueCount > 0) status = 'CRITICAL'
+    else if (sfToday === 0 || lowChemCount > 5) status = 'ATTENTION'
+
+    const insight = generateInsight(blocked, sfPending, overdueCount, overdueUsd, sfToday, sfMonth)
+
+    return NextResponse.json({
+      production: {
+        sf_today: sfToday,
+        sf_month: sfMonth,
+        target_month: TARGET_MONTH_SF,
+        progress_pct: progressPct,
+        operators_today: operatorsToday,
+      },
+      circuit: {
+        blocked: parseInt(c.blocked) || 0,
+        lab_ready: parseInt(c.lab_ready) || 0,
+        production: parseInt(c.production) || 0,
+        inspection: parseInt(c.inspection) || 0,
+        invoiced: parseInt(c.invoiced) || 0,
+        sf_pending: sfPending,
+      },
+      finance: {
+        revenue_month: revenueMonth,
+        payables,
+        overdue_count: overdueCount,
+        overdue_usd: overdueUsd,
+        net: revenueMonth - payables,
+      },
+      alerts: {
+        low_chem_count: lowChemCount,
+        dep_alert: depAlert || false,
+      },
+      dependency: {
+        top_client: topClient?.client || null,
+        top_pct: topClient?.pct || 0,
+        threshold: 70,
+        clients: depClients,
+      },
+      insight,
+      status,
+      as_of: new Date().toISOString(),
+    })
+  } finally {
+    client.release()
+  }
+}

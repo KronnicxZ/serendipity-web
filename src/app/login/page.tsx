@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/auth-context'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Shield, Lock, ChevronLeft, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, KeyRound, CheckCircle2 } from 'lucide-react'
+import { Shield, Lock, ChevronLeft, Mail, Eye, EyeOff, ArrowRight, ShieldCheck, KeyRound, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Button, Input } from '@/components/ui-library'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -15,6 +15,8 @@ import { useSettings } from '@/hooks/use-settings'
 import { sendMfaEmail, verifyMfaCode } from '@/app/actions/mfa'
 
 const REMEMBER_KEY = 'anthropos_remembered_email'
+const MFA_AUTH_KEY = 'mfa_pending_auth'
+const MFA_EMAIL_KEY = 'mfa_target_email'
 
 export default function LoginPage() {
     const { login, loading } = useAuth()
@@ -28,11 +30,20 @@ export default function LoginPage() {
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
     const [pendingMfaAuth, setPendingMfaAuth] = useState<{ hash: string; expiration: number } | null>(null)
     const [mfaError, setMfaError] = useState<string | null>(null)
+    const [mfaTargetEmail, setMfaTargetEmail] = useState('')
+    const [isResending, setIsResending] = useState(false)
+    const [resendCooldown, setResendCooldown] = useState(0)
+    const [isSendingInitialOtp, setIsSendingInitialOtp] = useState(false)
+    const [initialOtpFailed, setInitialOtpFailed] = useState(false)
+    const [isValidatingCredentials, setIsValidatingCredentials] = useState(false)
 
     const [identity, setIdentity] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [rememberMe, setRememberMe] = useState(false)
+
+    // Ref to store credentials for post-MFA login (survives re-renders)
+    const pendingCredentials = useRef<{ email: string; password: string } | null>(null)
 
     // Pre-fill email si estaba guardado
     useEffect(() => {
@@ -42,6 +53,47 @@ export default function LoginPage() {
             setRememberMe(true)
         }
     }, [])
+
+    // Cooldown timer for resend button
+    useEffect(() => {
+        if (resendCooldown <= 0) return
+        const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+        return () => clearTimeout(timer)
+    }, [resendCooldown])
+
+    const sendOtp = async (targetEmail: string) => {
+        try {
+            const res = await sendMfaEmail(targetEmail)
+            if (res.success && res.hash && res.expiration) {
+                const authData = { hash: res.hash, expiration: res.expiration }
+                setPendingMfaAuth(authData)
+                // Persist to sessionStorage as backup (survives re-renders/remounts)
+                try {
+                    sessionStorage.setItem(MFA_AUTH_KEY, JSON.stringify(authData))
+                    sessionStorage.setItem(MFA_EMAIL_KEY, targetEmail)
+                } catch {}
+                setInitialOtpFailed(false)
+                return true
+            } else {
+                addNotification({
+                    type: 'ERROR',
+                    title: 'Error de envío',
+                    message: res.error || 'No se pudo enviar el código. Usa el botón Reenviar.',
+                })
+                setInitialOtpFailed(true)
+                return false
+            }
+        } catch (e: any) {
+            console.error('[MFA] sendOtp error:', e)
+            addNotification({
+                type: 'ERROR',
+                title: 'Error de conexión',
+                message: 'No se pudo contactar al servidor. Usa el botón Reenviar.',
+            })
+            setInitialOtpFailed(true)
+            return false
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -54,33 +106,58 @@ export default function LoginPage() {
         }
 
         try {
-            await login(identity, password)
-
-            // Si 2FA está habilitado en configuración del sistema
+            // Check if MFA is required
             if (settings.security.twoFactorEnabled) {
                 const todayStr = new Date().toISOString().split('T')[0]
                 const lastVerified = localStorage.getItem('anthropos_mfa_last_verified')
 
                 if (lastVerified === todayStr) {
+                    // Already verified today, do normal login
+                    await login(identity, password)
                     handleSuccess()
                     return
                 }
 
+                // *** KEY FIX: Validate credentials via direct API call ***
+                // Do NOT call login() which sets user in context and can cause re-renders
+                // that lose MFA state
+                setIsValidatingCredentials(true)
+                let credData: any
+                try {
+                    const credRes = await fetch('/api/auth/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: identity, password })
+                    })
+                    credData = await credRes.json()
+                } finally {
+                    setIsValidatingCredentials(false)
+                }
+
+                if (!credData.success) {
+                    throw new Error(credData.error || 'Credenciales incorrectas')
+                }
+
+                // Store credentials in ref for post-MFA login
+                pendingCredentials.current = { email: identity, password }
+
+                const targetEmail = credData.user?.personalEmail || credData.user?.email || identity
+                setMfaTargetEmail(targetEmail)
                 setStep('MFA')
 
-                const res = await sendMfaEmail(identity)
-                if (res.success && res.hash && res.expiration) {
-                    setPendingMfaAuth({ hash: res.hash, expiration: res.expiration })
-                } else {
-                    addNotification({
-                        type: 'ERROR',
-                        title: t('auth.oracleSophia') || 'Sophia Oracle',
-                        message: res.error || t('auth.loginErrorMessage'),
-                    })
+                // Send OTP
+                setIsSendingInitialOtp(true)
+                try {
+                    const sent = await sendOtp(targetEmail)
+                    if (sent) setResendCooldown(60)
+                } finally {
+                    setIsSendingInitialOtp(false)
                 }
                 return
             }
 
+            // No MFA needed — do normal login
+            await login(identity, password)
             handleSuccess()
         } catch (error: any) {
             console.error(error)
@@ -92,25 +169,77 @@ export default function LoginPage() {
         }
     }
 
+    const handleResendCode = async () => {
+        if (resendCooldown > 0 || isResending) return
+        setIsResending(true)
+        setMfaError(null)
+        setOtpCode('')
+        try {
+            const targetEmail = mfaTargetEmail || sessionStorage.getItem(MFA_EMAIL_KEY) || identity
+            const ok = await sendOtp(targetEmail)
+            if (ok) {
+                setResendCooldown(60)
+                addNotification({
+                    type: 'SUCCESS',
+                    title: 'Código reenviado',
+                    message: `Nuevo código enviado a ${targetEmail}`,
+                })
+            }
+        } finally {
+            setIsResending(false)
+        }
+    }
+
     const handleMFA = async (e: React.FormEvent) => {
         e.preventDefault()
         setMfaError(null)
         setIsVerifyingOtp(true)
         try {
-            if (otpCode.length === 6) {
-                if (!pendingMfaAuth) {
-                    throw new Error('Parámetros de seguridad faltantes. Refresca la página e intenta de nuevo.')
-                }
-                const res = await verifyMfaCode(identity, otpCode, pendingMfaAuth.hash, pendingMfaAuth.expiration)
-                if (res.success) {
-                    const todayStr = new Date().toISOString().split('T')[0]
-                    localStorage.setItem('anthropos_mfa_last_verified', todayStr)
-                    handleSuccess()
-                } else {
-                    throw new Error(res.error || 'Código incorrecto o expirado')
-                }
-            } else {
+            if (otpCode.length !== 6) {
                 throw new Error('El código debe ser de 6 dígitos')
+            }
+
+            // Get MFA auth data from state OR sessionStorage (backup)
+            let mfaAuth = pendingMfaAuth
+            if (!mfaAuth) {
+                try {
+                    const stored = sessionStorage.getItem(MFA_AUTH_KEY)
+                    if (stored) {
+                        mfaAuth = JSON.parse(stored)
+                        if (mfaAuth) setPendingMfaAuth(mfaAuth)
+                    }
+                } catch {}
+            }
+
+            if (!mfaAuth) {
+                throw new Error('Parámetros de seguridad faltantes. Refresca la página e intenta de nuevo.')
+            }
+
+            const targetEmail = mfaTargetEmail || sessionStorage.getItem(MFA_EMAIL_KEY) || identity
+
+            const res = await verifyMfaCode(targetEmail, otpCode, mfaAuth.hash, mfaAuth.expiration)
+            if (res.success) {
+                // MFA passed — NOW do the full login to set user in context
+                const creds = pendingCredentials.current
+                if (creds) {
+                    await login(creds.email, creds.password)
+                } else {
+                    // Fallback: use form fields
+                    await login(identity, password)
+                }
+
+                const todayStr = new Date().toISOString().split('T')[0]
+                localStorage.setItem('anthropos_mfa_last_verified', todayStr)
+
+                // Clean up sessionStorage
+                try {
+                    sessionStorage.removeItem(MFA_AUTH_KEY)
+                    sessionStorage.removeItem(MFA_EMAIL_KEY)
+                } catch {}
+
+                handleSuccess()
+            } else {
+                throw new Error(res.error || 'Código incorrecto o expirado')
             }
         } catch (error: any) {
             setMfaError(error.message || 'Código incorrecto')
@@ -313,10 +442,10 @@ export default function LoginPage() {
                                         <Button
                                             type="submit"
                                             className="w-full !h-14 text-base !rounded-[20px] bg-blue-600 text-white hover:bg-blue-700 shadow-lg shadow-blue-600/20 font-bold uppercase tracking-widest transition-all active:scale-[0.98]"
-                                            isLoading={loading}
+                                            isLoading={loading || isValidatingCredentials}
                                         >
                                             {t('auth.loginAction') || 'INGRESAR'}
-                                            {!loading && <ArrowRight size={18} className="ml-2" />}
+                                            {!loading && !isValidatingCredentials && <ArrowRight size={18} className="ml-2" />}
                                         </Button>
                                     </form>
 
@@ -335,7 +464,7 @@ export default function LoginPage() {
                                     </footer>
                                 </motion.div>
                             ) : (
-                                /* Paso MFA — sin cambios */
+                                /* Paso MFA */
                                 <motion.div
                                     key="mfa-form"
                                     initial={{ opacity: 0, x: 20 }}
@@ -351,8 +480,20 @@ export default function LoginPage() {
                                             {t('auth.mfaTitle') || 'Verificación Ritual'}
                                         </h1>
                                         <p className="text-[var(--muted-foreground)] text-sm font-medium leading-relaxed">
-                                            {t('auth.mfaDescription') || 'El Templo requiere una segunda llave de paso enviada a tu correo electrónico.'}
+                                            {t('auth.mfaDescription') || 'El Templo requiere una segunda llave de paso enviada a tu correo electrónico para sincronizar tu identidad.'}
                                         </p>
+                                        {mfaTargetEmail && (
+                                            <p className="text-xs text-amber-600 font-bold">
+                                                {isSendingInitialOtp ? 'Enviando código a: ' : initialOtpFailed ? 'Error enviando a: ' : 'Enviado a: '}
+                                                {mfaTargetEmail.replace(/(.{2})(.*)(@.*)/, '$1***$3')}
+                                            </p>
+                                        )}
+                                        {isSendingInitialOtp && (
+                                            <p className="text-xs text-blue-500 animate-pulse">Conectando con el servidor de correo...</p>
+                                        )}
+                                        {initialOtpFailed && !isSendingInitialOtp && (
+                                            <p className="text-xs text-red-500 font-semibold">El código no se pudo enviar. Usa el botón Reenviar abajo.</p>
+                                        )}
                                     </header>
 
                                     <form onSubmit={handleMFA} className="space-y-8">
@@ -374,6 +515,7 @@ export default function LoginPage() {
                                                         if (mfaError) setMfaError(null)
                                                     }}
                                                     placeholder="000000"
+                                                    autoFocus
                                                     className={cn(
                                                         'pl-14 !h-16 !rounded-2xl focus:!bg-[var(--card)] text-center text-3xl font-black tracking-[0.3em] overflow-hidden',
                                                         mfaError
@@ -400,6 +542,27 @@ export default function LoginPage() {
                                                 {t('auth.mfaAction') || 'Verificar Identidad'}
                                                 {!isVerifyingOtp && <CheckCircle2 size={18} className="ml-2" />}
                                             </Button>
+
+                                            {/* Reenviar código — siempre visible */}
+                                            <button
+                                                type="button"
+                                                onClick={handleResendCode}
+                                                disabled={resendCooldown > 0 || isResending || isSendingInitialOtp}
+                                                className={cn(
+                                                    "flex items-center justify-center gap-2 py-3 px-4 rounded-xl text-sm font-bold uppercase tracking-wider transition-all",
+                                                    resendCooldown > 0 || isResending || isSendingInitialOtp
+                                                        ? "text-gray-400 cursor-not-allowed"
+                                                        : "text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-900/20 active:scale-95"
+                                                )}
+                                            >
+                                                <RefreshCw size={16} className={cn(isResending && "animate-spin")} />
+                                                {isResending
+                                                    ? 'Enviando...'
+                                                    : resendCooldown > 0
+                                                        ? `Reenviar en ${resendCooldown}s`
+                                                        : 'Reenviar código'}
+                                            </button>
+
                                             <Button
                                                 type="button"
                                                 variant="ghost"

@@ -1,115 +1,169 @@
 import { FinanceSummary, FinancialClimate } from '@/types/finance';
-import { pool } from '@/lib/db';
+import { createClient } from '@/lib/supabase/client';
+import { localFetch } from '@/lib/local/client';
+
+interface SofiaBackendDashboard {
+    success: boolean;
+    financial: {
+        totalIncome: number;
+        totalExpenses: number;
+        cashFlow: number;
+        margin: number;
+        payroll: number;
+        customerCount: number;
+    };
+    production: {
+        pendingPayablesUsd: number;
+    };
+}
+
+interface SofiaPraraBalance {
+    remainingBalanceUSD: number;
+    totalAdvanceUSD: number;
+}
+
+interface SofiaDaemonRevenue {
+    success: boolean;
+    period: string;
+    totalVnd: number;
+    totalUsd: number;
+    praraUsd: number;
+    praraPercent: string;
+    pending: boolean;
+}
 
 export class FinanceService {
-  static async getSummary(): Promise<FinanceSummary> {
-    // finances_state holds running totals (one row, id=1)
-    let stateData: any = null;
-    try {
-      const { rows } = await pool.query(
-        `SELECT * FROM finances_state WHERE id = 1`
-      );
-      stateData = rows[0] ?? null;
-    } catch {
-      // table may not exist yet — fall through to defaults
-    }
+    static async getSummary(): Promise<FinanceSummary> {
+        const supabase = createClient();
 
-    // Monthly transactions since the 1st of the current month
-    const firstOfMonth = new Date();
-    firstOfMonth.setDate(1);
-    firstOfMonth.setHours(0, 0, 0, 0);
+        // === MODO LOCAL: datos reales desde nuestro backend ===
+        if (!supabase) {
+            try {
+                const [dash, prara, revenue] = await Promise.all([
+                    localFetch<SofiaBackendDashboard>('/api/serendipity/dashboard'),
+                    localFetch<SofiaPraraBalance>('/api/serendipity/prara-balance'),
+                    fetch('/sofia-daemon/api/revenue').then(r => r.json()).catch(() => null) as Promise<SofiaDaemonRevenue | null>,
+                ]);
 
-    let monthlyRevenue  = 0;
-    let monthlyExpenses = 0;
-    const expensesMap: Record<string, number> = {};
+                const f = dash.financial;
+                // Use daemon revenue (March real) if available, else fallback to dashboard
+                const monthlyRevenue = revenue?.success && revenue.totalUsd > 0
+                    ? revenue.totalUsd
+                    : f.totalIncome / 25000;
+                const payrollUsd = f.payroll / 25000;
+                const monthlyExpenses = payrollUsd + 30000000 / 25000; // payroll + overhead
+                const netProfit = monthlyRevenue - monthlyExpenses;
+                const profitMargin = monthlyRevenue > 0 ? (netProfit / monthlyRevenue) * 100 : 0;
+                const totalBalance = netProfit;
+                const debtRemaining = prara.remainingBalanceUSD;
+                const debtTotal = prara.totalAdvanceUSD;
 
-    try {
-      const { rows: txs } = await pool.query(
-        `SELECT type, amount, category FROM transactions WHERE date >= $1`,
-        [firstOfMonth.toISOString()]
-      );
+                const climate = FinanceService.calculateClimate(monthlyRevenue, monthlyExpenses, totalBalance);
 
-      for (const tx of txs) {
-        const amount = Number(tx.amount);
-        if (tx.type === 'INCOME') {
-          monthlyRevenue += amount;
-        } else if (tx.type === 'EXPENSE') {
-          monthlyExpenses += amount;
-          const cat = tx.category || 'Otros';
-          expensesMap[cat] = (expensesMap[cat] || 0) + amount;
+                return {
+                    totalBalance,
+                    monthlyRevenue,
+                    monthlyExpenses,
+                    netProfit,
+                    profitMargin,
+                    reserveFund: totalBalance * 0.1,
+                    reserveTarget: 10000,
+                    debtRemaining,
+                    debtTotal,
+                    climate,
+                    expensesByCategory: [
+                        { category: 'Nómina', amount: payrollUsd, percentage: 60, color: 'bg-[var(--foreground)]' },
+                        { category: 'Operativos', amount: monthlyExpenses - payrollUsd, percentage: 40, color: 'bg-blue-500' },
+                    ],
+                };
+            } catch (err) {
+                console.error('[LocalMode] Finance fetch failed:', err);
+                return FinanceService.emptyState();
+            }
         }
-      }
-    } catch {
-      // transactions table may not exist yet — defaults kick in below
+
+        // === MODO SUPABASE (producción) ===
+        let stateData = null;
+        try {
+            const { data, error } = await supabase.from('finances_state').select('*').eq('id', 1).single();
+            if (!error) stateData = data;
+        } catch {}
+
+        const firstDayOfMonth = new Date();
+        firstDayOfMonth.setDate(1);
+        firstDayOfMonth.setHours(0, 0, 0, 0);
+
+        const { data: txs } = await supabase
+            .from('transactions')
+            .select('*')
+            .gte('date', firstDayOfMonth.toISOString());
+
+        let monthlyRevenue = 0;
+        let monthlyExpenses = 0;
+        const expensesMap: Record<string, number> = {};
+
+        (txs || []).forEach((tx: any) => {
+            const amount = Number(tx.amount);
+            if (tx.type === 'INCOME') monthlyRevenue += amount;
+            else if (tx.type === 'EXPENSE') {
+                monthlyExpenses += amount;
+                const cat = tx.category || 'Otros';
+                expensesMap[cat] = (expensesMap[cat] || 0) + amount;
+            }
+        });
+
+        const netProfit = monthlyRevenue - monthlyExpenses;
+        const profitMargin = monthlyRevenue > 0 ? (netProfit / monthlyRevenue) * 100 : 0;
+        const totalBalance = Number(stateData?.total_balance || 0);
+        const climate = FinanceService.calculateClimate(monthlyRevenue, monthlyExpenses, totalBalance);
+
+        const colors = ['bg-[var(--foreground)]', 'bg-blue-500', 'bg-red-500', 'bg-[var(--secondary)]'];
+        const expensesByCategory = Object.entries(expensesMap)
+            .sort(([, a], [, b]) => b - a)
+            .map(([cat, amt], i) => ({
+                category: cat,
+                amount: amt,
+                percentage: monthlyExpenses > 0 ? (amt / monthlyExpenses) * 100 : 0,
+                color: colors[i % colors.length]
+            }));
+
+        return {
+            totalBalance,
+            monthlyRevenue,
+            monthlyExpenses,
+            netProfit,
+            profitMargin,
+            reserveFund: totalBalance * 0.1,
+            reserveTarget: 50000,
+            debtRemaining: 0,
+            debtTotal: 0,
+            climate,
+            expensesByCategory,
+        };
     }
 
-    const netProfit    = monthlyRevenue - monthlyExpenses;
-    const profitMargin = monthlyRevenue > 0 ? (netProfit / monthlyRevenue) * 100 : 0;
-    const totalBalance = Number(stateData?.total_balance ?? 0);
+    static calculateClimate(revenue: number, expenses: number, balance: number): FinancialClimate {
+        const margin = revenue > 0 ? ((revenue - expenses) / revenue) * 100 : 0;
 
-    const colors = ['bg-[var(--foreground)]', 'bg-blue-500', 'bg-red-500', 'bg-[var(--secondary)]'];
-    const sortedCategories = Object.entries(expensesMap)
-      .sort(([, a], [, b]) => b - a)
-      .map(([cat, amt], i) => ({
-        category:   cat,
-        amount:     amt,
-        percentage: monthlyExpenses > 0 ? (amt / monthlyExpenses) * 100 : 0,
-        color:      colors[i % colors.length],
-      }));
-
-    const climate = this.calculateClimate(monthlyRevenue, monthlyExpenses, totalBalance);
-
-    return {
-      totalBalance:       totalBalance   || 24500,
-      monthlyRevenue:     monthlyRevenue || 12500,
-      monthlyExpenses:    monthlyExpenses || 8200,
-      netProfit:          netProfit      || 4300,
-      profitMargin:       profitMargin   || 34.4,
-      reserveFund:        Number(stateData?.reserve_fund    ?? 21000),
-      reserveTarget:      Number(stateData?.reserve_target  ?? 41000),
-      debtRemaining:      Number(stateData?.debt_remaining  ?? 15000),
-      debtTotal:          Number(stateData?.debt_total      ?? 40000),
-      climate,
-      expensesByCategory: sortedCategories.length > 0 ? sortedCategories : [
-        { category: 'Planta & Energía',    amount: 3200, percentage: 39, color: 'bg-[var(--foreground)]' },
-        { category: 'Recursos Humanos',    amount: 2800, percentage: 34, color: 'bg-blue-500' },
-        { category: 'Insumos de Proceso',  amount: 1200, percentage: 15, color: 'bg-red-500' },
-      ],
-    };
-  }
-
-  static calculateClimate(revenue: number, expenses: number, balance: number): FinancialClimate {
-    const ratio = balance / (expenses || 1);
-
-    if (ratio >= 3) {
-      return {
-        icon: 'waves',
-        season: 'COSECHA',
-        message: 'Época de cosecha. Los ríos fluyen con abundancia.',
-        weatherClass: 'from-blue-500/10 to-transparent',
-        liquidityLevel: 'ALTA',
-        flowTrend: 'SUBIENDO',
-      };
+        if (balance < 2000 || margin < 0) {
+            return { icon: 'zap', season: 'TORMENTA', message: 'Liquidez crítica. Acción inmediata requerida.', weatherClass: 'weather-storm', liquidityLevel: 'CRÍTICA', flowTrend: 'BAJANDO' };
+        }
+        if (margin < 20) {
+            return { icon: 'cloud-rain', season: 'SEQUÍA', message: 'Margen ajustado. Controlar gastos.', weatherClass: 'weather-drought', liquidityLevel: 'BAJA', flowTrend: 'BAJANDO' };
+        }
+        if (margin < 40) {
+            return { icon: 'cloud-sun', season: 'SIEMBRA', message: 'Crecimiento en curso. Sostener el ritmo.', weatherClass: 'weather-planting', liquidityLevel: 'MEDIA', flowTrend: 'ESTABLE' };
+        }
+        return { icon: 'sun', season: 'COSECHA', message: 'Flujo positivo. Momentun operativo activo.', weatherClass: 'weather-harvest', liquidityLevel: 'ALTA', flowTrend: 'SUBIENDO' };
     }
 
-    if (ratio >= 0.5) {
-      return {
-        icon: 'sun',
-        season: 'SIEMBRA',
-        message: 'Tiempo de siembra. Preparando el terreno para el crecimiento.',
-        weatherClass: 'from-blue-500/10 to-transparent',
-        liquidityLevel: 'MEDIA',
-        flowTrend: 'ESTABLE',
-      };
+    private static emptyState(): FinanceSummary {
+        return {
+            totalBalance: 0, monthlyRevenue: 0, monthlyExpenses: 0,
+            netProfit: 0, profitMargin: 0, reserveFund: 0, reserveTarget: 10000,
+            debtRemaining: 0, debtTotal: 0,
+            climate: { icon: 'cloud', season: 'SIEMBRA', message: 'Conectando con el sistema...', weatherClass: 'weather-planting', liquidityLevel: 'MEDIA', flowTrend: 'ESTABLE' },
+            expensesByCategory: [],
+        };
     }
-
-    return {
-      icon: 'zap',
-      season: 'TORMENTA',
-      message: 'Tormenta inminente. El sistema exige acción inmediata.',
-      weatherClass: 'from-red-500/10 to-transparent',
-      liquidityLevel: 'CRÍTICA',
-      flowTrend: 'BAJANDO',
-    };
-  }
 }

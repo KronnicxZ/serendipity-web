@@ -42,3 +42,9 @@ next-env.d.ts
 
 .vercel
 .env*.local
+
+# Debug scripts (not app code)
+*.cjs
+*.mjs
+db_backups/
+.next.bak*/

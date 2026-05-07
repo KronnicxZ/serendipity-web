@@ -1,50 +1,65 @@
-// Migrated from Supabase → local PostgreSQL
-import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
-import bcrypt from 'bcryptjs';
+import { NextResponse } from 'next/server';
+import { Pool } from 'pg';
+
+const pool = new Pool({
+    connectionString: 'postgresql://postgres:Abundancia2026@localhost:5432/postgres'
+});
 
 export async function GET() {
-  try {
-    const { rows } = await pool.query(
-      `SELECT id, email, name, role, created_at FROM "GoogleUsers" ORDER BY created_at DESC`
-    );
-    return NextResponse.json({ users: rows });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+    try {
+        const { rows } = await pool.query(
+            `SELECT id, name, email, role, created_at FROM users ORDER BY created_at ASC`
+        );
+        return NextResponse.json({ users: rows });
+    } catch (err: any) {
+        console.error('[Admin Users GET]', err.message);
+        return NextResponse.json({ users: [] });
+    }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const { email, password, name, role = 'OPERATIVO' } = await req.json();
-    if (!email || !password || !name)
-      return NextResponse.json({ error: 'Faltan campos: email, password, name' }, { status: 400 });
-
-    const hash = await bcrypt.hash(password, 10);
-    const { rows } = await pool.query(
-      `INSERT INTO "GoogleUsers" (email, password_hash, name, role, created_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id, email, name, role, created_at`,
-      [email, hash, name, role]
-    );
-    if (!rows.length)
-      return NextResponse.json({ error: 'Email ya registrado' }, { status: 409 });
-
-    return NextResponse.json({ success: true, user: rows[0] }, { status: 201 });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+export async function POST(request: Request) {
+    try {
+        const body = await request.json();
+        const { name, email, role } = body;
+        if (!name || !email || !role) {
+            return NextResponse.json({ error: 'name, email and role are required' }, { status: 400 });
+        }
+        const { rows } = await pool.query(
+            `INSERT INTO users (name, email, role) VALUES ($1, $2, $3)
+             ON CONFLICT (email) DO UPDATE SET name=$1, role=$3, updated_at=now()
+             RETURNING id, name, email, role, created_at`,
+            [name, email, role]
+        );
+        return NextResponse.json({ user: rows[0] });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
 }
 
-export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('id');
-    if (!userId) return NextResponse.json({ error: 'ID requerido' }, { status: 400 });
-    await pool.query(`DELETE FROM "GoogleUsers" WHERE id = $1`, [userId]);
-    return NextResponse.json({ success: true });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
-  }
+export async function PATCH(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, role } = body;
+        if (!id || !role) return NextResponse.json({ error: 'id and role required' }, { status: 400 });
+        const { rows } = await pool.query(
+            `UPDATE users SET role=$1, updated_at=now() WHERE id=$2 RETURNING id, name, email, role`,
+            [role, id]
+        );
+        if (rows.length === 0) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+        return NextResponse.json({ user: rows[0] });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+        await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
+        return NextResponse.json({ success: true });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
 }

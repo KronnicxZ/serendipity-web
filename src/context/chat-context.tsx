@@ -38,7 +38,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                     if (newMsg.receiver_id === user.id && newMsg.sender_id !== activeChatId) {
                         // Get sender details for a better notification
                         const users = await MessagingService.getUsers()
-                        const sender = users.find(u => u.id === newMsg.sender_id)
+                        const sender = users.find((u: any) => u.id === newMsg.sender_id)
                         
                         addNotification({
                             type: newMsg.is_critical ? 'CRITICAL' : 'INFO',

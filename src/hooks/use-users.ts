@@ -16,14 +16,19 @@ export function useUsers() {
     const supabase = createClient()
 
     const fetchUsers = async () => {
-        if (!supabase) return
         try {
             setLoading(true)
+            if (!supabase) {
+                // Local mode — fetch from local API backed by postgres
+                const res = await fetch('/api/admin/users')
+                const json = await res.json()
+                setUsers(json.users || [])
+                return
+            }
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
                 .order('created_at', { ascending: false })
-
             if (error) throw error
             setUsers(data || [])
         } catch (err: any) {
@@ -34,17 +39,27 @@ export function useUsers() {
     }
 
     const updateUserRole = async (userId: string, role: string) => {
-        if (!supabase) return { success: false, error: 'Supabase not initialized' }
+        if (!supabase) {
+            try {
+                const res = await fetch('/api/admin/users', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: userId, role })
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error)
+                setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: role as any } : u))
+                return { success: true }
+            } catch (err: any) {
+                return { success: false, error: err.message }
+            }
+        }
         try {
             const { error } = await supabase
                 .from('users')
                 .update({ role })
                 .eq('id', userId)
-
             if (error) throw error
-
-            // Also update auth metadata if possible, but usually role transitions should be handled carefully
-            // For now we just update the public table
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: role as any } : u))
             return { success: true }
         } catch (err: any) {
@@ -61,7 +76,6 @@ export function useUsers() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to create user');
-            
             await fetchUsers();
             return { success: true };
         } catch (err: any) {
@@ -76,7 +90,6 @@ export function useUsers() {
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Failed to delete user');
-            
             setUsers(prev => prev.filter(u => u.id !== userId));
             return { success: true };
         } catch (err: any) {

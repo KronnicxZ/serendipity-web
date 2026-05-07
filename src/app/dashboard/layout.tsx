@@ -14,7 +14,11 @@ import {
     Cloud,
     CloudRain,
     Zap,
-    Sun
+    Sun,
+    Crosshair,
+    FlaskConical,
+    Wand2,
+    Globe2
 } from 'lucide-react'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -143,13 +147,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO']
         },
         {
-            name: t('common.reports'),
-            description: t('sidebar.reportsDesc'),
-            icon: BarChart3,
-            href: '/dashboard/reportes',
-            roles: ['ADMIN', 'SUPERVISOR']
-        },
-        {
             name: t('common.finances'),
             description: t('sidebar.financesDesc'),
             icon: History,
@@ -157,18 +154,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             roles: ['ADMIN']
         },
         {
-            name: t('common.sophia'),
-            description: t('sidebar.sophiaDesc'),
-            icon: Sparkles,
-            href: '/dashboard/sophia',
+            name: 'Director Board',
+            description: 'Circuit monitor & simulator',
+            icon: Crosshair,
+            href: '/dashboard/director',
+            roles: ['ADMIN']
+        },
+        {
+            name: 'Genome',
+            description: 'Costos reales x SF · Yield · Químicos',
+            icon: FlaskConical,
+            href: '/dashboard/genome',
+            roles: ['ADMIN']
+        },
+        {
+            name: 'Lab · Alquimia',
+            description: 'Transmutación I · Pedido de fórmula y químicos',
+            icon: Wand2,
+            href: '/dashboard/lab',
             roles: ['ADMIN', 'SUPERVISOR']
         },
         {
-            name: t('common.settings'),
-            description: t('sidebar.settingsDesc'),
-            icon: Settings,
-            href: '/dashboard/configuracion',
-            roles: ['ADMIN', 'SUPERVISOR', 'OPERATIVO']
+            name: 'El Reino',
+            description: 'Nodos · Ciudadanos · DNA Events',
+            icon: Globe2,
+            href: '/dashboard/reino',
+            roles: ['ADMIN']
         },
     ], [t])
 

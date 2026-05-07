@@ -15,7 +15,13 @@ export interface Message {
 export const MessagingService = {
     async getMessages(userId: string, limit: number = 50) {
         const supabase = createClient();
-        if (!supabase) return [];
+        if (!supabase) {
+            try {
+                const res = await fetch('/api/local/messaging?userId=' + userId);
+                const data = await res.json();
+                return data.messages || [];
+            } catch { return []; }
+        }
 
         const { data, error } = await supabase
             .from('messages')
@@ -61,7 +67,17 @@ export const MessagingService = {
 
     async sendMessage(senderId: string, receiverId: string, content: string, isCritical: boolean = false) {
         const supabase = createClient();
-        if (!supabase) throw new Error('Supabase client not available');
+        if (!supabase) {
+            try {
+                const res = await fetch('/api/local/messaging', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ channel: 'internal', sender_id: senderId, receiver_id: receiverId, content, is_critical: isCritical }),
+                });
+                const data = await res.json();
+                return data.message as Message;
+            } catch (err: any) { throw err; }
+        }
 
         const { data, error } = await supabase
             .from('messages')
@@ -89,7 +105,14 @@ export const MessagingService = {
 
     async getUsers() {
         const supabase = createClient();
-        if (!supabase) return [];
+        if (!supabase) {
+            try {
+                const res = await fetch('/api/local/messaging?type=contacts');
+                const data = await res.json();
+                return data.contacts || [];
+            } catch { return []; }
+        }
+
 
         const { data, error } = await supabase
             .from('users')

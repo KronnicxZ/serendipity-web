@@ -4,9 +4,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
-  serverExternalPackages: ["pdf-parse", "nodemailer"],
-  // Turbopack has a CSS path resolution bug on Windows — use webpack
-  bundlePagesRouterDependencies: true,
+  serverExternalPackages: ["pdf-parse", "nodemailer", "pg"],
 
   // Redirigir www → dominio raíz (bueno para SEO)
   async redirects() {
@@ -16,6 +14,20 @@ const nextConfig: NextConfig = {
         has: [{ type: 'host', value: 'www.serendipity.vn' }],
         destination: 'https://serendipity.vn/:path*',
         permanent: true,
+      },
+    ]
+  },
+
+  // Proxy Sofia backend — evita CORS browser → localhost:5001
+  async rewrites() {
+    return [
+      {
+        source: '/sofia-api/:path*',
+        destination: 'http://localhost:5001/:path*',
+      },
+      {
+        source: '/sofia-daemon/:path*',
+        destination: 'http://localhost:5050/:path*',
       },
     ]
   },

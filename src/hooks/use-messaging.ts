@@ -23,7 +23,7 @@ export function useMessaging() {
 
     const fetchUsers = useCallback(async () => {
         const data = await MessagingService.getUsers();
-        setUsers(data.filter(u => u.id !== user?.id));
+        setUsers(data.filter((u: any) => u.id !== user?.id));
     }, [user]);
 
     useEffect(() => {
